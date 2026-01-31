@@ -26,6 +26,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         model: process.env.MODEL_NAME || 'qwen-max',
         messages,
         stream: true,
+        stream_options: { include_usage: true }, // 包含使用量信息
       });
 
       // 设置 SSE 响应头
@@ -36,8 +37,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       for await (const chunk of stream) {
         const content = chunk.choices[0]?.delta?.content;
+        
+        // 如果有内容，发送内容数据
         if (content) {
           res.write(`data: ${JSON.stringify({ content })}\n\n`);
+        }
+        
+        // 如果有usage信息，发送token使用数据
+        if (chunk.usage) {
+          const tokenData = {
+            usage: {
+              prompt_tokens: chunk.usage.prompt_tokens,
+              completion_tokens: chunk.usage.completion_tokens,
+              total_tokens: chunk.usage.total_tokens,
+            }
+          };
+          res.write(`data: ${JSON.stringify(tokenData)}\n\n`);
         }
       }
 
@@ -52,7 +67,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
 
       const content = response.choices[0]?.message?.content || '';
-      res.status(200).json({ content });
+      const usage = response.usage;
+      
+      res.status(200).json({ 
+        content, 
+        usage: usage ? {
+          prompt_tokens: usage.prompt_tokens,
+          completion_tokens: usage.completion_tokens,
+          total_tokens: usage.total_tokens,
+        } : undefined
+      });
     }
   } catch (error: any) {
     console.error('Error calling Qwen API:', error);

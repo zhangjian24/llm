@@ -7,7 +7,7 @@ import styles from '../styles/Home.module.css';
 export default function Home() {
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [messages, setMessages] = useState<Array<{role: string, content: string}>>([]);
+  const [messages, setMessages] = useState<Array<{role: string, content: string, usage?: {prompt_tokens: number, completion_tokens: number, total_tokens: number}}>>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // 滚动到底部
@@ -31,6 +31,7 @@ export default function Home() {
 
     try {
       // 发送请求到后端 API
+      // 使用流式响应获取实时token使用情况
       const response = await fetch('/api/qwen', {
         method: 'POST',
         headers: {
@@ -54,7 +55,7 @@ export default function Home() {
       }
 
       const decoder = new TextDecoder();
-      let assistantMessage = { role: 'assistant', content: '' };
+      let assistantMessage: { role: string, content: string, usage?: {prompt_tokens: number, completion_tokens: number, total_tokens: number} } = { role: 'assistant', content: '' };
       
       // 更新消息列表，添加一个空的助手回复
       setMessages(prev => [...prev, assistantMessage]);
@@ -80,6 +81,14 @@ export default function Home() {
               if (parsed.content) {
                 // 更新最后一条消息的内容
                 assistantMessage.content += parsed.content;
+                setMessages(prev => {
+                  const updated = [...prev];
+                  updated[updated.length - 1] = assistantMessage;
+                  return updated;
+                });
+              } else if (parsed.usage) {
+                // 更新最后一条消息的使用情况
+                assistantMessage.usage = parsed.usage;
                 setMessages(prev => {
                   const updated = [...prev];
                   updated[updated.length - 1] = assistantMessage;

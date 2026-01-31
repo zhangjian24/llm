@@ -4,6 +4,11 @@ import styles from '../styles/ChatWindow.module.css';
 interface Message {
   role: string;
   content: string;
+  usage?: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+  };
 }
 
 interface ChatWindowProps {
@@ -30,6 +35,13 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages }) => {
               </div>
               <div className={styles.content}>
                 {message.content}
+                {message.usage && (
+                  <div className={styles.tokenUsage}>
+                    <small>
+                      Tokens: In {message.usage.prompt_tokens} | Out {message.usage.completion_tokens} | Total {message.usage.total_tokens}
+                    </small>
+                  </div>
+                )}
               </div>
             </div>
           ))}

@@ -4,6 +4,9 @@
 
 ![](https://img.jianzhang.cc/2026/01/7179c34f282c33d4c06655d215b0eef7.png)
 
+
+![](https://img.jianzhang.cc/2026/01/6928ea31bb39ace945b15a9646e4406c.png)
+
 ## 功能特性
 
 - 基于 Next.js 的现代化前端界面
@@ -11,6 +14,7 @@
 - 完整的错误处理机制
 - 环境变量配置，确保安全性与可移植性
 - 响应式设计，支持多种设备
+- Token使用量统计，实时显示输入/输出/总token数
 
 ## 技术栈
 
@@ -93,12 +97,18 @@ qwen-chatbot/
 - `OPENAI_API_BASE`: API 基础 URL，默认为 `https://dashscope.aliyuncs.com/compatible-mode/v1`
 - `MODEL_NAME`: 使用的模型名称，默认为 `qwen-max`
 
+API 支持 token 使用量统计功能，可在响应中获取详细的 token 消耗信息：
+- `prompt_tokens`: 输入消息的 token 数量
+- `completion_tokens`: 模型回复的 token 数量
+- `total_tokens`: 总 token 数量（输入 + 输出）
+
 ## 使用说明
 
 1. 在输入框中输入您的问题或指令
 2. 点击 "Send" 按钮或按 Enter 键提交
 3. 机器人将以流式方式返回回答
 4. 对话历史将显示在聊天窗口中
+5. 每条助手回复下方将显示本次对话的token使用详情
 
 ## 自定义配置
 
@@ -107,6 +117,7 @@ qwen-chatbot/
 - 更换模型：在 `.env.local` 中更改 `MODEL_NAME`
 - API 地址：在 `.env.local` 中更改 `OPENAI_API_BASE`
 - 界面样式：修改 `styles/` 目录下的 CSS 模块文件
+- Token显示样式：修改 `styles/ChatWindow.module.css` 中的 `.tokenUsage` 样式
 
 ## 部署
 

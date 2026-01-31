@@ -2,6 +2,8 @@
 
 一个基于 Next.js 和通义千问（Qwen）大模型的 AI 聊天机器人，通过兼容 OpenAI 格式的 Chat API 接口调用 Qwen 模型。
 
+![](https://img.jianzhang.cc/2026/01/7179c34f282c33d4c06655d215b0eef7.png)
+
 ## 功能特性
 
 - 基于 Next.js 的现代化前端界面

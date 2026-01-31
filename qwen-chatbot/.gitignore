@@ -1,0 +1,51 @@
+# Dependencies
+node_modules/
+
+# Environment variables
+.env.local
+.env
+
+# Next.js
+.next/
+out/
+
+# Build
+build/
+dist/
+coverage/
+
+# System
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+ehthumbs.db
+Icon?
+Thumbs.db
+
+# Cache
+.cache/
+.svelte-kit/
+.nuxt/
+.next/
+public/build/
+dist/
+
+# Temporary files
+tmp/
+temp/
+
+# Secrets
+secrets/
+*.key
+*.pem

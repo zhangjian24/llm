@@ -6,7 +6,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { messages, stream = false } = req.body;
+  const { messages, stream = false, model, temperature = 0.7, top_p = 0.9, max_tokens = 2048 } = req.body;
 
   // 验证必需字段
   if (!messages || !Array.isArray(messages)) {
@@ -23,9 +23,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (stream) {
       // 流式响应
       const stream = await client.chat.completions.create({
-        model: process.env.MODEL_NAME || 'qwen-max',
+        model: model || process.env.MODEL_NAME || 'qwen-max',
         messages,
         stream: true,
+        temperature,
+        top_p,
+        max_tokens,
         stream_options: { include_usage: true }, // 包含使用量信息
       });
 
@@ -62,8 +65,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     } else {
       // 非流式响应
       const response = await client.chat.completions.create({
-        model: process.env.MODEL_NAME || 'qwen-max',
+        model: model || process.env.MODEL_NAME || 'qwen-max',
         messages,
+        temperature,
+        top_p,
+        max_tokens,
       });
 
       const content = response.choices[0]?.message?.content || '';
@@ -93,10 +99,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     } else if (error.status === 429) {
       errorMessage = 'Rate limit exceeded. Please try again later.';
       statusCode = 429;
+    } else if (error.status === 404 && error.message.includes('model')) {
+      errorMessage = 'Model not found or access denied. Please check the model name and your API permissions. Try using "qwen-max" instead of "qwen-max-0102".';
+      statusCode = 404;
     } else if (error.message) {
       errorMessage = error.message;
     }
-
+    
     res.status(statusCode).json({ 
       error: errorMessage,
       details: process.env.NODE_ENV === 'development' ? error.toString() : undefined

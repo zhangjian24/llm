@@ -1,0 +1,76 @@
+.configPanel {
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.configPanel h3 {
+  margin-top: 0;
+  margin-bottom: 12px;
+  color: #495057;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.configRow {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.configRow label {
+  min-width: 120px;
+  font-size: 14px;
+  color: #495057;
+  margin-right: 12px;
+  font-weight: 500;
+}
+
+.selectInput {
+  padding: 6px 10px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 14px;
+  background-color: white;
+  min-width: 200px;
+}
+
+.sliderInput {
+  flex-grow: 1;
+  height: 5px;
+  border-radius: 5px;
+  background: #d3d3d3;
+  outline: none;
+  margin-right: 10px;
+  -webkit-appearance: none;
+}
+
+.sliderInput::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #007bff;
+  cursor: pointer;
+}
+
+.sliderInput::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #007bff;
+  cursor: pointer;
+}
+
+.valueDisplay {
+  min-width: 40px;
+  text-align: right;
+  font-size: 14px;
+  color: #495057;
+  font-family: monospace;
+}

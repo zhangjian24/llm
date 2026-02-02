@@ -22,6 +22,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (stream) {
       // 流式响应
+      // 通义千问API支持system message，直接使用原始消息
       const stream = await client.chat.completions.create({
         model: model || process.env.MODEL_NAME || 'qwen-max',
         messages,
@@ -64,6 +65,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       res.end();
     } else {
       // 非流式响应
+      // 通义千问API支持system message，直接使用原始消息
       const response = await client.chat.completions.create({
         model: model || process.env.MODEL_NAME || 'qwen-max',
         messages,

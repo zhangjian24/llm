@@ -11,10 +11,13 @@ interface ModelConfig {
 interface ModelConfigPanelProps {
   config: ModelConfig;
   onUpdateConfig: (config: ModelConfig) => void;
+  disabled?: boolean; // 当前处于角色模式时，某些配置可能被禁用
 }
 
-const ModelConfigPanel: React.FC<ModelConfigPanelProps> = ({ config, onUpdateConfig }) => {
+const ModelConfigPanel: React.FC<ModelConfigPanelProps> = ({ config, onUpdateConfig, disabled = false }) => {
   const handleChange = (field: keyof ModelConfig, value: any) => {
+    if (disabled) return;
+    
     onUpdateConfig({
       ...config,
       [field]: value
@@ -39,6 +42,7 @@ const ModelConfigPanel: React.FC<ModelConfigPanelProps> = ({ config, onUpdateCon
           value={config.model}
           onChange={(e) => handleChange('model', e.target.value)}
           className={styles.selectInput}
+          disabled={disabled}
         >
           {modelOptions.map(option => (
             <option key={option.value} value={option.value}>{option.label}</option>
@@ -57,6 +61,7 @@ const ModelConfigPanel: React.FC<ModelConfigPanelProps> = ({ config, onUpdateCon
           value={config.temperature}
           onChange={(e) => handleChange('temperature', parseFloat(e.target.value))}
           className={styles.sliderInput}
+          disabled={disabled}
         />
         <span className={styles.valueDisplay}>{config.temperature.toFixed(2)}</span>
       </div>
@@ -72,6 +77,7 @@ const ModelConfigPanel: React.FC<ModelConfigPanelProps> = ({ config, onUpdateCon
           value={config.top_p}
           onChange={(e) => handleChange('top_p', parseFloat(e.target.value))}
           className={styles.sliderInput}
+          disabled={disabled}
         />
         <span className={styles.valueDisplay}>{config.top_p.toFixed(2)}</span>
       </div>
@@ -87,6 +93,7 @@ const ModelConfigPanel: React.FC<ModelConfigPanelProps> = ({ config, onUpdateCon
           value={config.max_tokens}
           onChange={(e) => handleChange('max_tokens', parseInt(e.target.value))}
           className={styles.sliderInput}
+          disabled={disabled}
         />
         <span className={styles.valueDisplay}>{config.max_tokens}</span>
       </div>

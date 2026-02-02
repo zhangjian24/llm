@@ -1,0 +1,85 @@
+.layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.mainContent {
+  flex: 1;
+  transition: all 0.3s ease;
+  margin-left: 250px; /* 与侧边栏宽度相同 */
+  width: calc(100% - 250px);
+}
+
+.mainContent.shifted {
+  margin-left: 250px;
+  width: calc(100% - 250px);
+}
+
+.contentWrapper {
+  padding: 20px;
+  min-height: 100vh;
+}
+
+/* 响应式设计 */
+@media (max-width: 1024px) {
+  .mainContent {
+    margin-left: 220px;
+    width: calc(100% - 220px);
+  }
+  
+  .mainContent.shifted {
+    margin-left: 220px;
+    width: calc(100% - 220px);
+  }
+}
+
+@media (max-width: 768px) {
+  .mainContent {
+    margin-left: 200px;
+    width: calc(100% - 200px);
+  }
+  
+  .mainContent.shifted {
+    margin-left: 200px;
+    width: calc(100% - 200px);
+  }
+  
+  .contentWrapper {
+    padding: 15px;
+  }
+}
+
+@media (max-width: 576px) {
+  .layout {
+    flex-direction: column;
+  }
+  
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 1001;
+    transform: translateX(0);
+  }
+  
+  .sidebar.closed {
+    transform: translateX(-100%);
+  }
+  
+  .mainContent {
+    margin-left: 0;
+    width: 100%;
+    padding-left: 0;
+    padding-right: 0;
+  }
+  
+  .mainContent.shifted {
+    margin-left: 0;
+    width: 100%;
+  }
+  
+  .contentWrapper {
+    padding: 10px;
+  }
+}

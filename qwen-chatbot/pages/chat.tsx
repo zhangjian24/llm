@@ -141,8 +141,9 @@ export default function ChatPage() {
       const decoder = new TextDecoder();
       let assistantMessage: Message = { role: 'assistant', content: '', usage: undefined };
       
-      // 更新消息列表，添加一个空的助手回复
-      dispatch({ type: 'ADD_MESSAGE', payload: assistantMessage });
+      // 创建助手消息并添加到消息列表
+      const newAssistantMessage: Message = { role: 'assistant', content: '', usage: undefined };
+      dispatch({ type: 'ADD_MESSAGE', payload: newAssistantMessage });
 
       while (true) {
         const { done, value } = await reader.read();
@@ -165,11 +166,14 @@ export default function ChatPage() {
               if (parsed.content) {
                 // 更新最后一条消息的内容
                 assistantMessage.content += parsed.content;
-                dispatch({ type: 'SET_MESSAGES', payload: [...messages, { ...assistantMessage }] });
+                // 确保包含用户消息和所有历史消息
+                const updatedMessages = [...messages, userMessage, { ...assistantMessage }];
+                dispatch({ type: 'SET_MESSAGES', payload: updatedMessages });
               } else if (parsed.usage) {
                 // 更新最后一条消息的使用情况
                 assistantMessage.usage = parsed.usage;
-                dispatch({ type: 'SET_MESSAGES', payload: [...messages, { ...assistantMessage }] });
+                const updatedMessages = [...messages, userMessage, { ...assistantMessage }];
+                dispatch({ type: 'SET_MESSAGES', payload: updatedMessages });
               }
             } catch (e) {
               // 忽略无法解析的数据行
@@ -180,7 +184,7 @@ export default function ChatPage() {
       }
       
       // 在流结束后记录对话历史
-      const updatedMessages = [...messages, userMessage, assistantMessage]; // 获取包含最新消息的完整消息列表
+      const updatedMessages = [...messages, assistantMessage]; // 获取包含最新消息的完整消息列表
       const lastAssistantMessage = updatedMessages[updatedMessages.length - 1]; // 最后一条消息应该是助手的回复
       
       if (lastAssistantMessage && lastAssistantMessage.role === 'assistant') {

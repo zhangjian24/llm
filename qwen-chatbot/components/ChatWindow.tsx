@@ -1,4 +1,5 @@
 import React from 'react';
+import TypeWriterEffect from './TypeWriterEffect';
 import styles from '../styles/ChatWindow.module.css';
 
 interface Message {
@@ -34,7 +35,15 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages }) => {
                 {message.role === 'user' ? '👤' : '🤖'}
               </div>
               <div className={styles.content}>
-                {message.content}
+                {message.role === 'assistant' && message.content ? (
+                  <TypeWriterEffect 
+                    text={message.content} 
+                    speed={30} 
+                    className={styles.assistantContent}
+                  />
+                ) : (
+                  message.content
+                )}
                 {message.usage && (
                   <div className={styles.tokenUsage}>
                     <small>

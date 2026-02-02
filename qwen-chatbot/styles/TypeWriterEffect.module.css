@@ -1,0 +1,19 @@
+.cursor {
+  display: inline-block;
+  width: 2px;
+  margin-left: 2px;
+  background-color: #000;
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.typeWriterText {
+  white-space: pre-wrap;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+}

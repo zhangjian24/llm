@@ -13,7 +13,7 @@ export const loadRolesFromStorage = (): Role[] => {
     if (storedRoles) {
       const parsedRoles = JSON.parse(storedRoles);
       // 确保所有角色都有完整的结构
-      return parsedRoles.map((role: any) => ({
+      const rolesWithCompleteStructure = parsedRoles.map((role: any) => ({
         ...role,
         modelConfig: {
           model: role.modelConfig?.model || 'qwen-max',
@@ -23,6 +23,32 @@ export const loadRolesFromStorage = (): Role[] => {
         },
         isDefault: !!role.isDefault
       }));
+      
+      // 检查是否有预设角色需要更新
+      let updatedRoles = [...rolesWithCompleteStructure];
+      let hasUpdates = false;
+      
+      // 遍历默认角色，检查是否需要更新现有角色的systemPrompt
+      DEFAULT_ROLES.forEach(defaultRole => {
+        const existingRoleIndex = updatedRoles.findIndex(r => r.id === defaultRole.id);
+        if (existingRoleIndex !== -1) {
+          // 如果找到了匹配的角色ID，检查systemPrompt是否需要更新
+          if (updatedRoles[existingRoleIndex].systemPrompt !== defaultRole.systemPrompt) {
+            updatedRoles[existingRoleIndex] = {
+              ...updatedRoles[existingRoleIndex],
+              systemPrompt: defaultRole.systemPrompt // 更新为最新的systemPrompt
+            };
+            hasUpdates = true;
+          }
+        }
+      });
+      
+      // 如果有更新，保存回存储
+      if (hasUpdates) {
+        saveRolesToStorage(updatedRoles);
+      }
+      
+      return updatedRoles;
     }
   } catch (error) {
     console.error('Error loading roles from storage:', error);

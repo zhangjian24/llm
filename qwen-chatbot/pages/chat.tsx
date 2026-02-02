@@ -166,13 +166,13 @@ export default function ChatPage() {
               if (parsed.content) {
                 // 更新最后一条消息的内容
                 assistantMessage.content += parsed.content;
-                // 确保包含用户消息和所有历史消息
-                const updatedMessages = [...messages, userMessage, { ...assistantMessage }];
+                // 只更新助手消息，保留之前的消息
+                const updatedMessages = [...messages, { ...assistantMessage }];
                 dispatch({ type: 'SET_MESSAGES', payload: updatedMessages });
               } else if (parsed.usage) {
                 // 更新最后一条消息的使用情况
                 assistantMessage.usage = parsed.usage;
-                const updatedMessages = [...messages, userMessage, { ...assistantMessage }];
+                const updatedMessages = [...messages, { ...assistantMessage }];
                 dispatch({ type: 'SET_MESSAGES', payload: updatedMessages });
               }
             } catch (e) {

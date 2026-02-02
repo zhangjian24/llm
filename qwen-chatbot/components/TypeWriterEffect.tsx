@@ -3,33 +3,47 @@ import styles from '../styles/TypeWriterEffect.module.css';
 
 interface TypeWriterEffectProps {
   text: string;
-  speed?: number; // 打字速度，毫秒
+  speed?: number; // 打字速度，毫秒/字符
   onComplete?: () => void; // 完成时的回调函数
   className?: string; // 自定义类名
 }
 
 const TypeWriterEffect: React.FC<TypeWriterEffectProps> = ({
   text,
-  speed = 20, // 打字速度，毫秒/字符
+  speed = 20, // 默认20ms/字符
   onComplete,
   className = ''
 }) => {
   const [displayedText, setDisplayedText] = useState('');
   const [isTyping, setIsTyping] = useState(true);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  
-  // 当文本变化时，开始打字效果
+  const lastTextRef = useRef(text);
+
+  // 当文本变化时触发
   useEffect(() => {
-    if (text && text.length > displayedText.length) {
+    // 如果文本为空，重置状态
+    if (!text) {
+      setDisplayedText('');
+      setIsTyping(false);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      return;
+    }
+
+    // 如果是新文本，开始打字效果
+    if (text !== lastTextRef.current) {
+      lastTextRef.current = text;
+      setDisplayedText('');
       setIsTyping(true);
       
       // 清除之前的定时器
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
-      
+
       // 逐字符添加
-      let currentIndex = displayedText.length;
+      let currentIndex = 0;
       const addChar = () => {
         if (currentIndex < text.length) {
           setDisplayedText(prev => prev + text[currentIndex]);
@@ -43,11 +57,11 @@ const TypeWriterEffect: React.FC<TypeWriterEffectProps> = ({
           }
         }
       };
-      
+
       timeoutRef.current = setTimeout(addChar, speed);
     }
-  }, [text, displayedText, speed, onComplete]);
-  
+  }, [text, speed, onComplete]);
+
   // 清理定时器
   useEffect(() => {
     return () => {

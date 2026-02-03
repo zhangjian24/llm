@@ -1,6 +1,6 @@
 import React from 'react';
 import TypeWriterEffect from './TypeWriterEffect';
-import styles from '../styles/ChatWindow.module.css';
+import { AiOutlineRobot, AiOutlineUser } from 'react-icons/ai';
 
 interface Message {
   role: string;
@@ -18,41 +18,48 @@ interface ChatWindowProps {
 
 const ChatWindow: React.FC<ChatWindowProps> = ({ messages }) => {
   return (
-    <div className={styles.chatWindow}>
+    <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
       {messages.length === 0 ? (
-        <div className={styles.welcomeMessage}>
-          <h2>Welcome to Qwen Chatbot!</h2>
-          <p>Ask me anything, and I'll do my best to assist you.</p>
+        <div className="text-center py-12">
+          <h2 className="text-2xl font-bold text-gray-700 mb-2">Welcome to Qwen Chatbot!</h2>
+          <p className="text-gray-500">Ask me anything, and I'll do my best to assist you.</p>
         </div>
       ) : (
-        <div className={styles.messagesContainer}>
+        <div className="space-y-4 w-full">
           {messages.map((message, index) => (
             <div 
               key={index} 
-              className={`${styles.message} ${message.role === 'user' ? styles.userMessage : styles.assistantMessage}`}
+              className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
-              <div className={styles.avatar}>
-                {message.role === 'user' ? '👤' : '🤖'}
-              </div>
-              <div className={styles.content}>
+              {message.role === 'assistant' && (
+                <div className="flex-shrink-0 w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm">
+                  <AiOutlineRobot className="w-4 h-4" />
+                </div>
+              )}
+              <div className={`max-w-[80%] ${message.role === 'user' ? 'bg-blue-500 text-white' : 'bg-white text-gray-800'} rounded-2xl px-4 py-3 shadow-sm`}>
                 {message.role === 'assistant' && message.content ? (
                   <TypeWriterEffect 
                     key={`typewriter-${index}-${message.content.length}`} 
                     text={message.content} 
-                    speed={50} // 放慢速度，让效果更明显
-                    className={styles.assistantContent}
+                    speed={50}
+                    className=""
                   />
                 ) : (
                   message.content
                 )}
                 {message.usage && (
-                  <div className={styles.tokenUsage}>
+                  <div className="mt-2 pt-2 border-t border-gray-200 text-xs text-gray-500">
                     <small>
                       Tokens: In {message.usage.prompt_tokens} | Out {message.usage.completion_tokens} | Total {message.usage.total_tokens}
                     </small>
                   </div>
                 )}
               </div>
+              {message.role === 'user' && (
+                <div className="flex-shrink-0 w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white text-sm">
+                  <AiOutlineUser className="w-4 h-4" />
+                </div>
+              )}
             </div>
           ))}
         </div>

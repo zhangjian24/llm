@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import Sidebar from './Sidebar';
-import styles from '../styles/Layout.module.css';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -12,11 +11,11 @@ const Layout: React.FC<LayoutProps> = ({ children, showHistoryModal, onHideHisto
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   return (
-    <div className={styles.layout}>
+    <div className="flex min-h-screen bg-gray-50">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       
-      <div className={`${styles.mainContent} ${sidebarOpen ? styles.shifted : ''}`}>
-        <div className={styles.contentWrapper}>
+      <div className={`flex-1 transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-0'} flex flex-col`}>
+        <div className="p-8 w-full flex-1">
           {children}
         </div>
       </div>

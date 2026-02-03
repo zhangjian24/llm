@@ -4,7 +4,7 @@ import RoleManager from '../components/RoleManager';
 import { useRoleStorage } from '../components/useRoleStorage';
 import { Role } from '../components/RoleManager';
 import Layout from '../components/Layout';
-import styles from '../styles/RolesPage.module.css';
+
 
 export default function RolesPage() {
   const {
@@ -33,21 +33,21 @@ export default function RolesPage() {
   }, [roles, loading, selectedRoleId, getDefaultRole]);
 
   if (loading) {
-    return <div className={styles.loading}>加载中...</div>;
+    return <div className="text-center py-8 text-gray-500">加载中...</div>;
   }
   
   return (
     <Layout>
-      <div className={styles.rolesPage}>
+      <div className="space-y-6">
         <Head>
           <title>Qwen Chatbot - AI角色管理</title>
           <meta name="description" content="Manage AI roles for Qwen Chatbot" />
           <link rel="icon" href="/favicon.ico" />
         </Head>
 
-        <header className={styles.header}>
-          <h1>AI角色管理</h1>
-          <p>创建和管理不同的AI角色，为不同场景定制AI助手</p>
+        <header className="text-center py-6 border-b border-gray-200">
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">AI角色管理</h1>
+          <p className="text-gray-600">创建和管理不同的AI角色，为不同场景定制AI助手</p>
         </header>
         
         <RoleManager

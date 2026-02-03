@@ -20,9 +20,10 @@
 ## 技术栈
 
 - **前端**: Next.js, React, TypeScript
+- **图标库**: react-icons (Ant Design Icons)
 - **后端**: Next.js API Routes
 - **AI 模型**: 通义千问（Qwen）通过 OpenAI 兼容 API
-- **样式**: CSS Modules
+- **样式**: Tailwind CSS
 
 ## 环境要求
 
@@ -80,9 +81,9 @@ qwen-chatbot/
 │   ├── ChatWindow.tsx     # 聊天窗口组件
 │   └── ChatInput.tsx      # 输入框组件
 ├── styles/                # 样式文件
-│   ├── Home.module.css    # 主页面样式
-│   ├── ChatWindow.module.css # 聊天窗口样式
-│   └── ChatInput.module.css # 输入框样式
+│   ├── globals.css        # Tailwind CSS 全局样式
+│   ├── tailwind.config.js # Tailwind 配置
+│   └── postcss.config.js  # PostCSS 配置
 ├── .env.local             # 环境变量配置（本地）
 ├── .env.example           # 环境变量示例
 ├── next.config.js         # Next.js 配置
@@ -119,9 +120,9 @@ API 支持 token 使用量统计功能，可在响应中获取详细的 token �
 
 - 更换模型：在 `.env.local` 中更改 `MODEL_NAME`
 - API 地址：在 `.env.local` 中更改 `OPENAI_API_BASE`
-- 界面样式：修改 `styles/` 目录下的 CSS 模块文件
-- Token显示样式：修改 `styles/ChatWindow.module.css` 中的 `.tokenUsage` 样式
-- Token统计面板样式：修改 `styles/ModelConfigPanel.module.css` 中的 `.statsPanel` 样式
+- 界面样式：使用 Tailwind CSS 类名进行样式定制（参考 [Tailwind CSS 文档](https://tailwindcss.com/docs)）
+- 图标：通过修改组件中的 react-icons 导入语句更换图标（如 `AiOutlineMessage`, `AiOutlineRobot` 等 Ant Design Icons）
+- Token显示样式：通过 Tailwind CSS 类名调整样式
 
 ## 部署
 

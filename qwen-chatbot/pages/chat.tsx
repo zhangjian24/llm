@@ -11,7 +11,7 @@ import { ConversationHistory, Message } from '../types';
 import HistoryModal from '../components/HistoryModal';
 import Layout from '../components/Layout';
 import { useAppContext } from '../contexts/AppContext';
-import styles from '../styles/ChatPage.module.css';
+
 
 export default function ChatPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -248,21 +248,21 @@ export default function ChatPage() {
   };
 
   if (loading) {
-    return <div className={styles.loading}>加载中...</div>;
+    return <div className="text-center py-8 text-gray-500">加载中...</div>;
   }
   
   return (
     <Layout>
-      <div className={styles.chatPage}>
+      <div className="space-y-6">
         <Head>
           <title>Qwen Chatbot - 对话</title>
           <meta name="description" content="Chatbot powered by Qwen AI" />
           <link rel="icon" href="/favicon.ico" />
         </Head>
 
-        <header className={styles.header}>
-          <h1>Qwen Chatbot</h1>
-          <p>Powered by Tongyi Qianwen AI</p>
+        <header className="text-center py-6 border-b border-gray-200">
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">Qwen Chatbot</h1>
+          <p className="text-gray-600">Powered by Tongyi Qianwen AI</p>
         </header>
         
         {/* 角色选择器 */}
@@ -290,9 +290,9 @@ export default function ChatPage() {
         
         <div ref={messagesEndRef} />
         
-        <div className={styles.actions}>
+        <div className="flex justify-center pt-4">
           <button 
-            className={styles.historyButton}
+            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
             onClick={() => setShowHistoryModal(true)}
           >
             查看历史

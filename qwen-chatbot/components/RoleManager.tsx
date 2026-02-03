@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import styles from '../styles/RoleManager.module.css';
 
 // 定义角色数据结构
 export interface Role {
@@ -278,154 +277,192 @@ const RoleManager: React.FC<RoleManagerProps> = ({
   };
 
   return (
-    <div className={styles.roleManager}>
-      <div className={styles.roleHeader}>
-        <h3>AI角色管理</h3>
-        <button onClick={handleCreateNew} className={styles.addButton}>+ 新建角色</button>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h3 className="text-xl font-bold text-gray-800">AI角色管理</h3>
+        <button 
+          onClick={handleCreateNew} 
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          + 新建角色
+        </button>
       </div>
       
-      <div className={styles.roleList}>
+      <div className="grid gap-4">
         {roles.map(role => (
           <div 
             key={role.id} 
-            className={`${styles.roleItem} ${selectedRoleId === role.id ? styles.selected : ''}`}
+            className={`bg-white rounded-lg border p-4 cursor-pointer transition-all hover:shadow-md ${selectedRoleId === role.id ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-200'}`}
             onClick={() => onSelectRole(role.id)}
           >
-            <div className={styles.roleInfo}>
-              <h4>{role.name} {role.isDefault && <span className={styles.defaultBadge}>默认</span>}</h4>
-              <p>{role.description}</p>
-            </div>
-            <div className={styles.roleActions}>
-              {!role.isDefault && (
+            <div className="flex justify-between items-start mb-3">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <h4 className="font-semibold text-gray-800">{role.name}</h4>
+                  {role.isDefault && (
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      默认
+                    </span>
+                  )}
+                </div>
+                <p className="text-gray-600 text-sm">{role.description}</p>
+              </div>
+              <div className="flex gap-2">
+                {!role.isDefault && (
+                  <button 
+                    onClick={(e) => handleSetDefault(role.id, e)} 
+                    className="px-3 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
+                  >
+                    设为默认
+                  </button>
+                )}
                 <button 
-                  onClick={(e) => handleSetDefault(role.id, e)} 
-                  className={styles.defaultButton}
+                  onClick={(e) => handleEdit(role)} 
+                  className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
                 >
-                  设为默认
+                  编辑
                 </button>
-              )}
-              <button 
-                onClick={(e) => handleEdit(role)} 
-                className={styles.editButton}
-              >
-                编辑
-              </button>
-              <button 
-                onClick={(e) => handleDelete(role.id, e)} 
-                className={styles.deleteButton}
-              >
-                删除
-              </button>
+                <button 
+                  onClick={(e) => handleDelete(role.id, e)} 
+                  className="px-3 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
+                >
+                  删除
+                </button>
+              </div>
             </div>
           </div>
         ))}
       </div>
       
       {showForm && currentRole && (
-        <div className={styles.roleFormOverlay}>
-          <div className={styles.roleForm}>
-            <h3>{isEditing ? '编辑角色' : '新建角色'}</h3>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
+            <h3 className="text-xl font-bold text-gray-800 mb-6 border-b pb-3">{isEditing ? '编辑角色' : '新建角色'}</h3>
             
-            <div className={styles.formGroup}>
-              <label>角色名称:</label>
-              <input
-                type="text"
-                value={currentRole.name}
-                onChange={(e) => handleInputChange('name', e.target.value)}
-                placeholder="输入角色名称"
-              />
-            </div>
-            
-            <div className={styles.formGroup}>
-              <label>角色描述:</label>
-              <textarea
-                value={currentRole.description}
-                onChange={(e) => handleInputChange('description', e.target.value)}
-                placeholder="描述角色的功能和特点"
-                rows={2}
-              />
-            </div>
-            
-            <div className={styles.formGroup}>
-              <label>系统指令 (System Prompt):</label>
-              <textarea
-                value={currentRole.systemPrompt}
-                onChange={(e) => handleInputChange('systemPrompt', e.target.value)}
-                placeholder="定义AI助手的行为和上下文"
-                rows={4}
-              />
-            </div>
-            
-            <div className={styles.formGroup}>
-              <label>模型配置:</label>
-              <div className={styles.modelConfig}>
-                <div className={styles.configRow}>
-                  <label>模型:</label>
-                  <select
-                    value={currentRole.modelConfig.model}
-                    onChange={(e) => handleInputChange('modelConfig.model', e.target.value)}
-                  >
-                    <option value="qwen-turbo">Qwen-Turbo (Fast & Cheap)</option>
-                    <option value="qwen-plus">Qwen-Plus (Balance)</option>
-                    <option value="qwen-max">Qwen-Max (Most Capable)</option>
-                  </select>
-                </div>
-                
-                <div className={styles.configRow}>
-                  <label>Temperature: {currentRole.modelConfig.temperature.toFixed(2)}</label>
-                  <input
-                    type="range"
-                    min="0"
-                    max="2"
-                    step="0.01"
-                    value={currentRole.modelConfig.temperature}
-                    onChange={(e) => handleInputChange('modelConfig.temperature', parseFloat(e.target.value))}
-                  />
-                  <span>{currentRole.modelConfig.temperature.toFixed(2)}</span>
-                </div>
-                
-                <div className={styles.configRow}>
-                  <label>Top-P: {currentRole.modelConfig.top_p.toFixed(2)}</label>
-                  <input
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.01"
-                    value={currentRole.modelConfig.top_p}
-                    onChange={(e) => handleInputChange('modelConfig.top_p', parseFloat(e.target.value))}
-                  />
-                  <span>{currentRole.modelConfig.top_p.toFixed(2)}</span>
-                </div>
-                
-                <div className={styles.configRow}>
-                  <label>Max Tokens: {currentRole.modelConfig.max_tokens}</label>
-                  <input
-                    type="range"
-                    min="1"
-                    max="8192"
-                    step="1"
-                    value={currentRole.modelConfig.max_tokens}
-                    onChange={(e) => handleInputChange('modelConfig.max_tokens', parseInt(e.target.value))}
-                  />
-                  <span>{currentRole.modelConfig.max_tokens}</span>
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">角色名称:</label>
+                <input
+                  type="text"
+                  value={currentRole.name}
+                  onChange={(e) => handleInputChange('name', e.target.value)}
+                  placeholder="输入角色名称"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">角色描述:</label>
+                <textarea
+                  value={currentRole.description}
+                  onChange={(e) => handleInputChange('description', e.target.value)}
+                  placeholder="描述角色的功能和特点"
+                  rows={2}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">系统指令 (System Prompt):</label>
+                <textarea
+                  value={currentRole.systemPrompt}
+                  onChange={(e) => handleInputChange('systemPrompt', e.target.value)}
+                  placeholder="定义AI助手的行为和上下文"
+                  rows={4}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">模型配置:</label>
+                <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">模型:</label>
+                    <select
+                      value={currentRole.modelConfig.model}
+                      onChange={(e) => handleInputChange('modelConfig.model', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="qwen-turbo">Qwen-Turbo (Fast & Cheap)</option>
+                      <option value="qwen-plus">Qwen-Plus (Balance)</option>
+                      <option value="qwen-max">Qwen-Max (Most Capable)</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <label className="text-sm font-medium text-gray-700">Temperature: {currentRole.modelConfig.temperature.toFixed(2)}</label>
+                      <span className="text-sm text-gray-500 bg-gray-200 px-2 py-1 rounded">{currentRole.modelConfig.temperature.toFixed(2)}</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="2"
+                      step="0.01"
+                      value={currentRole.modelConfig.temperature}
+                      onChange={(e) => handleInputChange('modelConfig.temperature', parseFloat(e.target.value))}
+                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                    />
+                  </div>
+                  
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <label className="text-sm font-medium text-gray-700">Top-P: {currentRole.modelConfig.top_p.toFixed(2)}</label>
+                      <span className="text-sm text-gray-500 bg-gray-200 px-2 py-1 rounded">{currentRole.modelConfig.top_p.toFixed(2)}</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value={currentRole.modelConfig.top_p}
+                      onChange={(e) => handleInputChange('modelConfig.top_p', parseFloat(e.target.value))}
+                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                    />
+                  </div>
+                  
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <label className="text-sm font-medium text-gray-700">Max Tokens: {currentRole.modelConfig.max_tokens}</label>
+                      <span className="text-sm text-gray-500 bg-gray-200 px-2 py-1 rounded">{currentRole.modelConfig.max_tokens}</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="1"
+                      max="8192"
+                      step="1"
+                      value={currentRole.modelConfig.max_tokens}
+                      onChange={(e) => handleInputChange('modelConfig.max_tokens', parseInt(e.target.value))}
+                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
-            
-            <div className={styles.formGroup}>
-              <label>
+              
+              <div className="flex items-center">
                 <input
                   type="checkbox"
                   checked={currentRole.isDefault}
                   onChange={(e) => handleInputChange('isDefault', e.target.checked)}
+                  className="mr-2 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                 />
-                设为默认角色
-              </label>
+                <label className="text-sm text-gray-700">设为默认角色</label>
+              </div>
             </div>
             
-            <div className={styles.formActions}>
-              <button onClick={handleSave} className={styles.saveButton}>保存</button>
-              <button onClick={handleCancel} className={styles.cancelButton}>取消</button>
+            <div className="flex justify-end gap-3 pt-4 border-t">
+              <button 
+                onClick={handleCancel} 
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                取消
+              </button>
+              <button 
+                onClick={handleSave} 
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                保存
+              </button>
             </div>
           </div>
         </div>

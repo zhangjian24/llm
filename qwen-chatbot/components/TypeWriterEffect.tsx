@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import styles from '../styles/TypeWriterEffect.module.css';
 
 interface TypeWriterEffectProps {
   text: string;
@@ -60,9 +59,9 @@ const TypeWriterEffect: React.FC<TypeWriterEffectProps> = ({
   }, [text, speed]);
 
   return (
-    <span className={`${styles.typeWriterText} ${className}`}>
+    <span className={`${className}`}>
       {displayedText}
-      {isTyping && <span className={styles.cursor}>|</span>}
+      {isTyping && <span className="animate-pulse ml-1">|</span>}
     </span>
   );
 };

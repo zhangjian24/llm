@@ -4,6 +4,8 @@
   "description": "",
   "main": "index.js",
   "dependencies": {
+    "@langchain/core": "^1.1.18",
+    "@langchain/openai": "^1.2.4",
     "accepts": "^2.0.0",
     "asynckit": "^0.4.0",
     "axios": "^1.13.4",
@@ -47,6 +49,7 @@
     "inherits": "^2.0.4",
     "ipaddr.js": "^1.9.1",
     "is-promise": "^4.0.0",
+    "langchain": "^1.2.16",
     "math-intrinsics": "^1.1.0",
     "media-typer": "^1.1.0",
     "merge-descriptors": "^2.0.0",

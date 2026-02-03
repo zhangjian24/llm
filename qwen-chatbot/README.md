@@ -41,7 +41,7 @@ cd qwen-chatbot
 ### 2. 安装依赖
 
 ```bash
-npm install
+pnpm install
 ```
 
 ### 3. 配置环境变量
@@ -63,7 +63,7 @@ MODEL_NAME=qwen-max
 ### 4. 启动开发服务器
 
 ```bash
-npm run dev
+pnpm run dev
 ```
 
 应用程序将在 `http://localhost:3000` 上运行。
@@ -128,13 +128,13 @@ API 支持 token 使用量统计功能，可在响应中获取详细的 token �
 ### 构建生产版本
 
 ```bash
-npm run build
+pnpm run build
 ```
 
 ### 启动生产服务器
 
 ```bash
-npm start
+pnpm start
 ```
 
 ## 故障排除

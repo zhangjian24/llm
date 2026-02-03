@@ -1,65 +1,100 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
-import OpenAI from 'openai';
+// Next.js API路由 - 通义千问模型调用接口
+// 提供流式和非流式两种响应模式，支持token使用量统计
 
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { HumanMessage, SystemMessage, AIMessage } from '@langchain/core/messages';
+import { callQwenChat, streamQwenChat, QwenChatOptions } from '../../lib/langchain';
+
+/**
+ * 通义千问API路由处理函数
+ * 支持流式和非流式响应，提供token使用量统计
+ * 
+ * @param req - Next.js API请求对象
+ * @param res - Next.js API响应对象
+ * @returns API响应结果
+ */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  // 仅接受POST请求
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { messages, stream = false, model, temperature = 0.7, top_p = 0.9, max_tokens = 2048 } = req.body;
+  // 解构请求体中的参数
+  const { 
+    messages,           // 消息数组，包含对话历史
+    stream = false,     // 是否启用流式响应
+    model,              // 模型名称
+    temperature = 0.7,  // 生成温度
+    top_p = 0.9,      // Top-p采样参数
+    max_tokens = 2048   // 最大生成token数
+  } = req.body;
 
-  // 验证必需字段
+  // 验证messages参数是否存在且为数组
   if (!messages || !Array.isArray(messages)) {
     return res.status(400).json({ error: 'Messages are required and must be an array' });
   }
 
   try {
-    // 创建 OpenAI 兼容的客户端，适配通义千问
-    const client = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY || '',
-      baseURL: process.env.OPENAI_API_BASE || 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    // 将消息数组转换为LangChain兼容的格式
+    // 根据消息角色创建相应的LangChain消息对象
+    const langchainMessages = messages.map((msg: any) => {
+      if (msg.role === 'system') {
+        // 系统消息 - 用于设定助手的行为和上下文
+        return new SystemMessage(msg.content);
+      } else if (msg.role === 'user') {
+        // 用户消息 - 包含用户的输入
+        return new HumanMessage(msg.content);
+      } else if (msg.role === 'assistant') {
+        // 助手消息 - 包含AI助手的回复
+        return new AIMessage(msg.content);
+      } else {
+        // 默认为用户消息，保证类型安全
+        return new HumanMessage(msg.content);
+      }
     });
 
+    // 构建模型调用选项
+    // 使用传入的参数或环境变量中的默认值
+    const options = {
+      model: model || process.env.MODEL_NAME || 'qwen-max',  // 模型名称
+      temperature,                                        // 生成温度
+      topP: top_p,                                       // Top-p采样参数
+      maxTokens: max_tokens,                             // 最大生成token数
+    };
+
+    // 根据stream参数决定使用流式或非流式响应
     if (stream) {
       try {
-        // 设置响应头
+        // 设置SSE (Server-Sent Events)响应头
+        // 允许客户端建立长连接以接收实时数据流
         res.writeHead(200, {
-          'Content-Type': 'text/event-stream',
-          'Cache-Control': 'no-cache',
-          'Connection': 'keep-alive',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type',
+          'Content-Type': 'text/event-stream',  // SSE内容类型
+          'Cache-Control': 'no-cache',         // 禁用缓存
+          'Connection': 'keep-alive',         // 保持连接
+          'Access-Control-Allow-Origin': '*',  // 允许跨域请求
+          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',  // 允许的HTTP方法
+          'Access-Control-Allow-Headers': 'Content-Type',        // 允许的请求头
         });
 
-        // 通义千问API支持system message，直接使用原始消息
-        const response = await client.chat.completions.create({
-          model: model || process.env.MODEL_NAME || 'qwen-max',
-          messages,
-          stream: true,
-          temperature,
-          top_p,
-          max_tokens,
-          stream_options: { include_usage: true }, // 包含使用量信息
-        });
-
-        // 逐块发送数据
-        for await (const chunk of response) {
-          const content = chunk.choices[0]?.delta?.content;
-          
-          // 如果有内容，发送内容数据
-          if (content) {
-            const data = `data: ${JSON.stringify({ content })}\n\n`;
+        // 使用LangChain进行流式处理
+        // 逐块接收AI生成的内容并实时发送给客户端
+        const streamResult = streamQwenChat(langchainMessages, options);
+        
+        // 遍历流式结果并逐块发送给客户端
+        for await (const chunk of streamResult) {
+          if (chunk.content) {
+            // 发送内容块
+            const data = `data: ${JSON.stringify({ content: chunk.content })}\n\n`;
             res.write(data);
           }
           
-          // 如果有usage信息，发送token使用数据
           if (chunk.usage) {
+            // 发送token使用量信息
             const tokenData = {
               usage: {
-                prompt_tokens: chunk.usage.prompt_tokens,
-                completion_tokens: chunk.usage.completion_tokens,
-                total_tokens: chunk.usage.total_tokens,
+                prompt_tokens: chunk.usage.prompt_tokens,      // 输入token数
+                completion_tokens: chunk.usage.completion_tokens, // 输出token数
+                total_tokens: chunk.usage.total_tokens,           // 总token数
               }
             };
             const data = `data: ${JSON.stringify(tokenData)}\n\n`;
@@ -67,11 +102,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           }
         }
         
-        // 发送结束信号
+        // 发送流结束信号
         res.write('data: [DONE]\n\n');
         res.end();
         return;
       } catch (error: any) {
+        // 记录错误并发送错误信息给客户端
         console.error('Stream processing error:', error);
         const errorMessage = `data: ${JSON.stringify({ error: error.message || 'AI service error' })}\n\n`;
         res.write(errorMessage);
@@ -79,52 +115,49 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return;
       }
     } else {
-      // 非流式响应
-      // 通义千问API支持system message，直接使用原始消息
-      const response = await client.chat.completions.create({
-        model: model || process.env.MODEL_NAME || 'qwen-max',
-        messages,
-        temperature,
-        top_p,
-        max_tokens,
-      });
-
-      const content = response.choices[0]?.message?.content || '';
-      const usage = response.usage;
+      // 非流式响应 - 等待完整结果后一次性返回
+      const result = await callQwenChat(langchainMessages, options);
       
+      // 返回JSON格式的响应
       res.status(200).json({ 
-        content, 
-        usage: usage ? {
-          prompt_tokens: usage.prompt_tokens,
-          completion_tokens: usage.completion_tokens,
-          total_tokens: usage.total_tokens,
-        } : undefined
+        content: result.content,  // AI生成的内容
+        usage: result.usage       // token使用量统计
       });
     }
   } catch (error: any) {
-    console.error('Error calling Qwen API:', error);
+    // 记录错误信息
+    console.error('Error calling Qwen API with LangChain:', error);
     
+    // 初始化错误信息和状态码
     let errorMessage = 'An error occurred while calling the API';
     let statusCode = 500;
     
+    // 根据错误状态码设置具体的错误信息
     if (error.status === 401) {
+      // 认证失败
       errorMessage = 'Authentication failed. Please check your API key.';
       statusCode = 401;
     } else if (error.status === 403) {
+      // 访问被拒绝
       errorMessage = 'Access forbidden. Please check your API permissions.';
       statusCode = 403;
     } else if (error.status === 429) {
+      // 请求频率超限
       errorMessage = 'Rate limit exceeded. Please try again later.';
       statusCode = 429;
     } else if (error.status === 404 && error.message.includes('model')) {
+      // 模型未找到
       errorMessage = 'Model not found or access denied. Please check the model name and your API permissions. Try using "qwen-max" instead of "qwen-max-0102".';
       statusCode = 404;
     } else if (error.message) {
+      // 其他错误
       errorMessage = error.message;
     }
     
+    // 返回错误响应
     res.status(statusCode).json({ 
-      error: errorMessage,
+      error: errorMessage,  // 错误信息
+      // 在开发环境中返回详细的错误信息
       details: process.env.NODE_ENV === 'development' ? error.toString() : undefined
     });
   }

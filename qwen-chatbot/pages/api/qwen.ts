@@ -21,72 +21,63 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
 
     if (stream) {
-      // 使用 TransformStream 实现流式响应
-      const encoder = new TextEncoder();
-      const stream = new TransformStream();
-      const writer = stream.writable.getWriter();
-
-      // 异步处理函数
-      (async () => {
-        try {
-          // 通义千问API支持system message，直接使用原始消息
-          const response = await client.chat.completions.create({
-            model: model || process.env.MODEL_NAME || 'qwen-max',
-            messages,
-            stream: true,
-            temperature,
-            top_p,
-            max_tokens,
-            stream_options: { include_usage: true }, // 包含使用量信息
-          });
-
-          // 逐块发送数据
-          for await (const chunk of response) {
-            const content = chunk.choices[0]?.delta?.content;
-            
-            // 如果有内容，发送内容数据
-            if (content) {
-              const data = `data: ${JSON.stringify({ content })}\n\n`;
-              await writer.write(encoder.encode(data));
-            }
-            
-            // 如果有usage信息，发送token使用数据
-            if (chunk.usage) {
-              const tokenData = {
-                usage: {
-                  prompt_tokens: chunk.usage.prompt_tokens,
-                  completion_tokens: chunk.usage.completion_tokens,
-                  total_tokens: chunk.usage.total_tokens,
-                }
-              };
-              const data = `data: ${JSON.stringify(tokenData)}\n\n`;
-              await writer.write(encoder.encode(data));
-            }
-          }
-          
-          // 发送结束信号
-          await writer.write(encoder.encode('data: [DONE]\n\n'));
-        } catch (error: any) {
-          // 发送错误信息
-          await writer.write(
-            encoder.encode(`data: ${JSON.stringify({ error: error.message || 'AI service error' })}\n\n`)
-          );
-        } finally {
-          await writer.close();
-        }
-      })();
-
-      // 返回 SSE 响应
-      res.setHeader('Content-Type', 'text/event-stream');
-      res.setHeader('Cache-Control', 'no-cache');
-      res.setHeader('Connection', 'keep-alive');
-      return new Response(stream.readable, {
-        headers: {
+      try {
+        // 设置响应头
+        res.writeHead(200, {
           'Content-Type': 'text/event-stream',
           'Cache-Control': 'no-cache',
           'Connection': 'keep-alive',
-        },
-      });
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type',
+        });
+
+        // 通义千问API支持system message，直接使用原始消息
+        const response = await client.chat.completions.create({
+          model: model || process.env.MODEL_NAME || 'qwen-max',
+          messages,
+          stream: true,
+          temperature,
+          top_p,
+          max_tokens,
+          stream_options: { include_usage: true }, // 包含使用量信息
+        });
+
+        // 逐块发送数据
+        for await (const chunk of response) {
+          const content = chunk.choices[0]?.delta?.content;
+          
+          // 如果有内容，发送内容数据
+          if (content) {
+            const data = `data: ${JSON.stringify({ content })}\n\n`;
+            res.write(data);
+          }
+          
+          // 如果有usage信息，发送token使用数据
+          if (chunk.usage) {
+            const tokenData = {
+              usage: {
+                prompt_tokens: chunk.usage.prompt_tokens,
+                completion_tokens: chunk.usage.completion_tokens,
+                total_tokens: chunk.usage.total_tokens,
+              }
+            };
+            const data = `data: ${JSON.stringify(tokenData)}\n\n`;
+            res.write(data);
+          }
+        }
+        
+        // 发送结束信号
+        res.write('data: [DONE]\n\n');
+        res.end();
+        return;
+      } catch (error: any) {
+        console.error('Stream processing error:', error);
+        const errorMessage = `data: ${JSON.stringify({ error: error.message || 'AI service error' })}\n\n`;
+        res.write(errorMessage);
+        res.end();
+        return;
+      }
     } else {
       // 非流式响应
       // 通义千问API支持system message，直接使用原始消息

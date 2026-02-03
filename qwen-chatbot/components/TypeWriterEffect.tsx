@@ -1,75 +1,63 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import styles from '../styles/TypeWriterEffect.module.css';
 
 interface TypeWriterEffectProps {
   text: string;
-  speed?: number; // 打字速度，毫秒/字符
-  onComplete?: () => void; // 完成时的回调函数
-  className?: string; // 自定义类名
+  speed?: number;
+  className?: string;
 }
 
-const TypeWriterEffect: React.FC<TypeWriterEffectProps> = ({
-  text,
-  speed = 20, // 默认20ms/字符
-  onComplete,
+const TypeWriterEffect: React.FC<TypeWriterEffectProps> = ({ 
+  text, 
+  speed = 100,
   className = ''
 }) => {
   const [displayedText, setDisplayedText] = useState('');
   const [isTyping, setIsTyping] = useState(true);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const lastTextRef = useRef(text);
 
-  // 当文本变化时触发
   useEffect(() => {
-    // 如果文本为空，重置状态
+    // 每次text变化时重置
+    setDisplayedText('');
+    setIsTyping(true);
+    
+    // 清除之前的定时器
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+
+    // 如果文本为空，直接返回
     if (!text) {
-      setDisplayedText('');
       setIsTyping(false);
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
       return;
     }
 
-    // 如果是新文本，开始打字效果
-    if (text !== lastTextRef.current) {
-      lastTextRef.current = text;
-      setDisplayedText('');
-      setIsTyping(true);
-      
-      // 清除之前的定时器
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-
-      // 逐字符添加
-      let currentIndex = 0;
-      const addChar = () => {
-        if (currentIndex < text.length) {
-          setDisplayedText(prev => prev + text[currentIndex]);
-          currentIndex++;
-          timeoutRef.current = setTimeout(addChar, speed);
-        } else {
-          // 打字完成
-          setIsTyping(false);
-          if (onComplete) {
-            onComplete();
-          }
+    // 开始打字
+    let index = 0;
+    const typeNextChar = () => {
+      if (index < text.length) {
+        const char = text[index];
+        // 确保字符不是undefined
+        if (char !== undefined && char !== null) {
+          // 强制更新，避免React优化
+          setDisplayedText(prev => prev + char);
         }
-      };
+        index++;
+        timeoutRef.current = setTimeout(typeNextChar, speed);
+      } else {
+        setIsTyping(false);
+      }
+    };
 
-      timeoutRef.current = setTimeout(addChar, speed);
-    }
-  }, [text, speed, onComplete]);
+    timeoutRef.current = setTimeout(typeNextChar, speed);
 
-  // 清理定时器
-  useEffect(() => {
+    // 清理
     return () => {
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
     };
-  }, []);
+  }, [text, speed]);
 
   return (
     <span className={`${styles.typeWriterText} ${className}`}>

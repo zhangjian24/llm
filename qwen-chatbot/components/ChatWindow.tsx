@@ -37,8 +37,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages }) => {
               <div className={styles.content}>
                 {message.role === 'assistant' && message.content ? (
                   <TypeWriterEffect 
+                    key={`typewriter-${index}-${message.content.length}`} 
                     text={message.content} 
-                    speed={30} 
+                    speed={50} // 放慢速度，让效果更明显
                     className={styles.assistantContent}
                   />
                 ) : (

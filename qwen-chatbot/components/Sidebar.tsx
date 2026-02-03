@@ -50,13 +50,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onClose }) => {
         <ul className={styles.menuList}>
           {menuItems.map((item) => (
             <li key={item.id} className={styles.menuItem}>
-              <Link href={item.path} passHref legacyBehavior>
-                <a 
-                  className={`${styles.menuLink} ${router.pathname === item.path ? styles.active : ''}`}
-                >
-                  <span className={styles.iconWrapper}>{item.icon}</span>
-                  <span className={styles.menuText}>{item.title}</span>
-                </a>
+              <Link 
+                href={item.path}
+                className={`${styles.menuLink} ${router.pathname === item.path ? styles.active : ''}`}
+              >
+                <span className={styles.iconWrapper}>{item.icon}</span>
+                <span className={styles.menuText}>{item.title}</span>
               </Link>
             </li>
           ))}

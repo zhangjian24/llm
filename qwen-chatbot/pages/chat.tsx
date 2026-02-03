@@ -141,10 +141,14 @@ export default function ChatPage() {
       const decoder = new TextDecoder();
       let assistantMessage: Message = { role: 'assistant', content: '', usage: undefined };
       
-      // 创建助手消息并添加到消息列表
-      const newAssistantMessage: Message = { role: 'assistant', content: '', usage: undefined };
-      dispatch({ type: 'ADD_MESSAGE', payload: newAssistantMessage });
+      // 在开始流式传输之前，先添加一个空的助手消息到列表
+      const initialAssistantMessage: Message = { role: 'assistant', content: '', usage: undefined };
+      const initialMessages = [...messages, userMessage, initialAssistantMessage];
+      dispatch({ type: 'SET_MESSAGES', payload: initialMessages });
 
+      // 创建一个引用，用于跟踪当前的消息状态
+      let currentMessages = [...messages, userMessage, { ...initialAssistantMessage }];
+      
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -163,17 +167,21 @@ export default function ChatPage() {
 
             try {
               const parsed = JSON.parse(data);
-              if (parsed.content) {
+              if (parsed.content !== undefined && parsed.content !== null) {
                 // 更新最后一条消息的内容
-                assistantMessage.content += parsed.content;
-                // 只更新助手消息，保留之前的消息
-                const updatedMessages = [...messages, { ...assistantMessage }];
-                dispatch({ type: 'SET_MESSAGES', payload: updatedMessages });
-              } else if (parsed.usage) {
+                assistantMessage.content += String(parsed.content);
+                // 创建一个新的助手消息
+                const newAssistantMessage = { ...assistantMessage };
+                // 更新当前消息引用
+                currentMessages = [...currentMessages.slice(0, -1), newAssistantMessage];
+                dispatch({ type: 'SET_MESSAGES', payload: currentMessages });
+              } else if (parsed.usage && typeof parsed.usage === 'object') {
                 // 更新最后一条消息的使用情况
                 assistantMessage.usage = parsed.usage;
-                const updatedMessages = [...messages, { ...assistantMessage }];
-                dispatch({ type: 'SET_MESSAGES', payload: updatedMessages });
+                const newAssistantMessage = { ...assistantMessage };
+                // 更新当前消息引用
+                currentMessages = [...currentMessages.slice(0, -1), newAssistantMessage];
+                dispatch({ type: 'SET_MESSAGES', payload: currentMessages });
               }
             } catch (e) {
               // 忽略无法解析的数据行

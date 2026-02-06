@@ -54,7 +54,16 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
                 </div>
               )}
               <div className={`max-w-[80%] ${message.role.toLowerCase() === 'user' ? 'bg-blue-500 text-white' : 'bg-white text-gray-800'} rounded-2xl px-4 py-3 shadow-sm`}>
-                {message.content || (message.role.toLowerCase() === 'user' ? '请发送消息' : 'AI 正在思考...')}
+                {message.role.toLowerCase() === 'assistant' ? (
+                  <ReactMarkdown 
+                    remarkPlugins={[remarkGfm]}
+                    rehypePlugins={[rehypeHighlight]}
+                  >
+                    {message.content || 'AI 正在思考...'}
+                  </ReactMarkdown>
+                ) : (
+                  message.content || '请发送消息'
+                )}
               </div>
             </div>
           ))}

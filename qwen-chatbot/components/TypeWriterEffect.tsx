@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface TypeWriterEffectProps {
   text: string;
@@ -59,10 +61,12 @@ const TypeWriterEffect: React.FC<TypeWriterEffectProps> = ({
   }, [text, speed]);
 
   return (
-    <span className={`${className}`}>
-      {displayedText}
+    <div className={`${className}`}>
+      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+        {displayedText}
+      </ReactMarkdown>
       {isTyping && <span className="animate-pulse ml-1">|</span>}
-    </span>
+    </div>
   );
 };
 

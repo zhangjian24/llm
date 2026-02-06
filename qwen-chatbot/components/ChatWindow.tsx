@@ -2,6 +2,7 @@ import React from 'react';
 import TypeWriterEffect from './TypeWriterEffect';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import rehypeHighlight from 'rehype-highlight';
 import { AiOutlineRobot, AiOutlineUser } from 'react-icons/ai';
 
 interface Message {
@@ -53,7 +54,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages }) => {
                         className=""
                       />
                     ) : (
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
                         {message.content}
                       </ReactMarkdown>
                     )

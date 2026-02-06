@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import rehypeHighlight from 'rehype-highlight';
 
 interface TypeWriterEffectProps {
   text: string;
@@ -62,7 +63,7 @@ const TypeWriterEffect: React.FC<TypeWriterEffectProps> = ({
 
   return (
     <div className={`${className}`}>
-      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
         {displayedText}
       </ReactMarkdown>
       {isTyping && <span className="animate-pulse ml-1">|</span>}

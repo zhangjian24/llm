@@ -7,6 +7,9 @@
 
 ![](https://img.jianzhang.cc/2026/01/6928ea31bb39ace945b15a9646e4406c.png)
 
+
+![](https://img.jianzhang.cc/2026/02/0758cb218c03dfce5e1b489cae158139.png)
+
 ## 功能特性
 
 - 基于 Next.js 的现代化前端界面

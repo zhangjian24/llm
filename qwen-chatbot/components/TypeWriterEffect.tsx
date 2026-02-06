@@ -64,9 +64,8 @@ const TypeWriterEffect: React.FC<TypeWriterEffectProps> = ({
   return (
     <div className={`${className}`}>
       <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
-        {displayedText}
+        {displayedText + (isTyping ? '|' : '')}
       </ReactMarkdown>
-      {isTyping && <span className="animate-pulse ml-1">|</span>}
     </div>
   );
 };

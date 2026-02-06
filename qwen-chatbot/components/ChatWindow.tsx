@@ -26,42 +26,52 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages }) => {
         </div>
       ) : (
         <div className="space-y-4 w-full">
-          {messages.map((message, index) => (
-            <div 
-              key={index} 
-              className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-            >
-              {message.role === 'assistant' && (
-                <div className="flex-shrink-0 w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm">
-                  <AiOutlineRobot className="w-4 h-4" />
-                </div>
-              )}
-              <div className={`max-w-[80%] ${message.role === 'user' ? 'bg-blue-500 text-white' : 'bg-white text-gray-800'} rounded-2xl px-4 py-3 shadow-sm`}>
-                {message.role === 'assistant' && message.content ? (
-                  <TypeWriterEffect 
-                    key={`typewriter-${index}-${message.content.length}`} 
-                    text={message.content} 
-                    speed={50}
-                    className=""
-                  />
-                ) : (
-                  message.content
+          {messages.map((message, index) => {
+            // Find the index of the last assistant message
+            const lastAssistantIndex = messages.map((msg, i) => msg.role === 'assistant' ? i : -1).filter(i => i !== -1).pop() ?? -1;
+            const isLastAssistant = message.role === 'assistant' && index === lastAssistantIndex;
+            
+            return (
+              <div 
+                key={index} 
+                className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
+                {message.role === 'assistant' && (
+                  <div className="flex-shrink-0 w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm">
+                    <AiOutlineRobot className="w-4 h-4" />
+                  </div>
                 )}
-                {message.usage && (
-                  <div className="mt-2 pt-2 border-t border-gray-200 text-xs text-gray-500">
-                    <small>
-                      Tokens: In {message.usage.prompt_tokens} | Out {message.usage.completion_tokens} | Total {message.usage.total_tokens}
-                    </small>
+                <div className={`max-w-[80%] ${message.role === 'user' ? 'bg-blue-500 text-white' : 'bg-white text-gray-800'} rounded-2xl px-4 py-3 shadow-sm`}>
+                  {message.role === 'assistant' && message.content ? (
+                    isLastAssistant ? (
+                      <TypeWriterEffect 
+                        key={`typewriter-${index}-${message.content.length}`} 
+                        text={message.content} 
+                        speed={50}
+                        className=""
+                      />
+                    ) : (
+                      message.content
+                    )
+                  ) : (
+                    message.content
+                  )}
+                  {message.usage && (
+                    <div className="mt-2 pt-2 border-t border-gray-200 text-xs text-gray-500">
+                      <small>
+                        Tokens: In {message.usage.prompt_tokens} | Out {message.usage.completion_tokens} | Total {message.usage.total_tokens}
+                      </small>
+                    </div>
+                  )}
+                </div>
+                {message.role === 'user' && (
+                  <div className="flex-shrink-0 w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white text-sm">
+                    <AiOutlineUser className="w-4 h-4" />
                   </div>
                 )}
               </div>
-              {message.role === 'user' && (
-                <div className="flex-shrink-0 w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white text-sm">
-                  <AiOutlineUser className="w-4 h-4" />
-                </div>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

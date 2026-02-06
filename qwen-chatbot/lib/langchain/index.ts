@@ -4,7 +4,10 @@
 
 import { ChatOpenAI } from "@langchain/openai";
 import { BaseMessage, HumanMessage, SystemMessage, AIMessage } from "@langchain/core/messages";
-
+import { tools } from "./tools";
+import { ToolMessage } from "@langchain/core/messages";
+import { RunnableWithMessageHistory } from "@langchain/core/runnables";
+import { JsonOutputParser } from "@langchain/core/output_parsers";
 /**
  * 创建Qwen聊天模型实例
  * 使用DashScope API兼容OpenAI格式
@@ -145,5 +148,161 @@ export async function* streamQwenChat(
           }
         : undefined,
     };
+  }
+}
+
+/**
+ * 使用LangChain同步调用Qwen模型并支持工具调用
+ * 
+ * @param messages - 消息数组，包含系统消息、用户消息和助手消息
+ * @param options - 模型调用选项
+ * @returns 包含内容和使用量信息的响应对象
+ */
+export const callQwenChatWithTools = async (
+  messages: BaseMessage[],
+  options?: QwenChatOptions
+): Promise<ChatResponse> => {
+  const model = createQwenChatModel({
+    modelName: options?.model,
+    temperature: options?.temperature,
+    topP: options?.topP,
+    maxTokens: options?.maxTokens,
+  });
+
+  // 绑定工具到模型
+  const modelWithTools = model.bindTools(tools);
+
+  const result = await modelWithTools.invoke(messages);
+
+  // 如果模型调用了工具，我们需要处理工具调用结果
+  if (result.tool_calls && result.tool_calls.length > 0) {
+    // 为每个工具调用执行相应的工具
+    const toolMessages = [];
+    for (const toolCall of result.tool_calls) {
+      const { name, args, id } = toolCall;
+      
+      // 查找对应的工具
+      const tool = tools.find(t => t.name === name);
+      if (tool) {
+        try {
+          const toolResult = await tool.invoke(args);
+          const content = typeof toolResult === 'string' ? toolResult : JSON.stringify(toolResult);
+          toolMessages.push(new ToolMessage({
+            content: content || '工具调用未返回结果',
+            tool_call_id: id || '',
+          }));
+        } catch (error) {
+          const errorMessage = `工具调用失败: ${(error as Error)?.message || '未知错误'}`;
+          toolMessages.push(new ToolMessage({
+            content: errorMessage,
+            tool_call_id: id || '',
+          }));
+        }
+      }
+    }
+
+    // 使用工具结果再次调用模型以获得最终响应
+    const finalResult = await model.invoke([...messages, result, ...toolMessages]);
+    
+    return {
+      content: finalResult.content as string,
+      usage: finalResult.usage_metadata
+        ? {
+            prompt_tokens: finalResult.usage_metadata.input_tokens,
+            completion_tokens: finalResult.usage_metadata.output_tokens,
+            total_tokens: finalResult.usage_metadata.total_tokens,
+          }
+        : undefined,
+    };
+  }
+
+  return {
+    content: result.content as string,
+    usage: result.usage_metadata
+      ? {
+          prompt_tokens: result.usage_metadata.input_tokens,
+          completion_tokens: result.usage_metadata.output_tokens,
+          total_tokens: result.usage_metadata.total_tokens,
+        }
+      : undefined,
+  };
+};
+
+/**
+ * 使用LangChain以流式方式调用Qwen模型并支持工具调用
+ * 
+ * @param messages - 消息数组，包含系统消息、用户消息和助手消息
+ * @param options - 模型调用选项
+ * @yields 包含内容片段和使用量信息的对象
+ */
+export async function* streamQwenChatWithTools(
+  messages: BaseMessage[],
+  options?: QwenChatOptions
+) {
+  const model = createQwenChatModel({
+    modelName: options?.model,
+    temperature: options?.temperature,
+    topP: options?.topP,
+    maxTokens: options?.maxTokens,
+  });
+
+  // 绑定工具到模型
+  const modelWithTools = model.bindTools(tools);
+
+  const stream = await modelWithTools.stream(messages);
+
+  for await (const chunk of stream) {
+    // 如果是工具调用，处理工具调用
+    if (chunk.tool_calls && chunk.tool_calls.length > 0) {
+      // 收集所有工具调用结果
+      const toolMessages = [];
+      for (const toolCall of chunk.tool_calls) {
+        const { name, args, id } = toolCall;
+        
+        // 查找对应的工具
+        const tool = tools.find(t => t.name === name);
+        if (tool) {
+          try {
+            const toolResult = await tool.invoke(args);
+            const content = typeof toolResult === 'string' ? toolResult : JSON.stringify(toolResult);
+            toolMessages.push(new ToolMessage({
+              content: content || '工具调用未返回结果',
+              tool_call_id: id || '',
+            }));
+          } catch (error) {
+            const errorMessage = `工具调用失败: ${(error as Error)?.message || '未知错误'}`;
+            toolMessages.push(new ToolMessage({
+              content: errorMessage,
+              tool_call_id: id || '',
+            }));
+          }
+        }
+      }
+
+      // 使用工具结果再次调用模型以获得最终响应
+      const finalResult = await model.invoke([...messages, chunk, ...toolMessages]);
+      
+      yield {
+        content: finalResult.content as string,
+        usage: finalResult.usage_metadata
+          ? {
+              prompt_tokens: finalResult.usage_metadata.input_tokens,
+              completion_tokens: finalResult.usage_metadata.output_tokens,
+              total_tokens: finalResult.usage_metadata.total_tokens,
+            }
+          : undefined,
+      };
+    } else {
+      yield {
+        content: chunk.content as string,
+        usage: chunk.usage_metadata
+          ? {
+              prompt_tokens: chunk.usage_metadata.input_tokens,
+              completion_tokens: chunk.usage_metadata.output_tokens,
+              total_tokens: chunk.usage_metadata.total_tokens,
+            }
+          : undefined,
+      };
+    }
   }
 }

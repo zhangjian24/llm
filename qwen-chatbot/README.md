@@ -25,6 +25,12 @@
 - **AI 模型**: 通义千问（Qwen）通过 OpenAI 兼容 API
 - **样式**: Tailwind CSS
 
+## 样式规范
+
+- **优先使用 Tailwind CSS**: 项目中应尽量使用 Tailwind CSS 类名进行样式设计，而不是编写自定义 CSS 样式
+- **样式一致性**: 所有组件的样式应遵循统一的设计规范，通过 Tailwind 的实用优先方法实现
+- **响应式设计**: 利用 Tailwind CSS 的响应式类名实现不同屏幕尺寸下的适配
+
 ## 环境要求
 
 - Node.js 18 或更高版本

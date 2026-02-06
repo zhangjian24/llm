@@ -3,7 +3,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { HumanMessage, SystemMessage, AIMessage } from '@langchain/core/messages';
-import { callQwenChat, streamQwenChat, QwenChatOptions } from '../../lib/langchain';
+import { callQwenChat, streamQwenChat, callQwenChatWithTools, streamQwenChatWithTools, QwenChatOptions } from '../../lib/langchain';
 
 /**
  * 通义千问API路由处理函数
@@ -62,6 +62,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       maxTokens: max_tokens,                             // 最大生成token数
     };
 
+    // 检查是否需要使用工具调用
+    const needsTools = messages.some((msg: any) => 
+      msg.content && 
+      (typeof msg.content === 'string') && 
+      (msg.content.toLowerCase().includes('天气') || 
+       msg.content.toLowerCase().includes('weather'))
+    );
+    
     // 根据stream参数决定使用流式或非流式响应
     if (stream) {
       try {
@@ -77,8 +85,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
 
         // 使用LangChain进行流式处理
-        // 逐块接收AI生成的内容并实时发送给客户端
-        const streamResult = streamQwenChat(langchainMessages, options);
+        // 选择是否使用工具调用的流式处理函数
+        const streamResult = needsTools 
+          ? streamQwenChatWithTools(langchainMessages, options)
+          : streamQwenChat(langchainMessages, options);
         
         // 遍历流式结果并逐块发送给客户端
         for await (const chunk of streamResult) {
@@ -116,7 +126,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     } else {
       // 非流式响应 - 等待完整结果后一次性返回
-      const result = await callQwenChat(langchainMessages, options);
+      const result = needsTools
+        ? await callQwenChatWithTools(langchainMessages, options)
+        : await callQwenChat(langchainMessages, options);
       
       // 返回JSON格式的响应
       res.status(200).json({ 

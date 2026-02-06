@@ -18,13 +18,18 @@ interface Message {
 
 interface ChatWindowProps {
   messages: Message[];
-  isLoading?: boolean;
+  isThinking?: boolean;
+  isGenerating?: boolean;
+  currentResponse?: string;
 }
 
-const ChatWindow: React.FC<ChatWindowProps> = ({ messages, isLoading = false }) => {
-  // 检查是否有最后一条助手消息
-  const hasLastAssistantMessage = messages.some(msg => msg.role === 'assistant');
-  
+const ChatWindow: React.FC<ChatWindowProps> = ({ 
+  messages, 
+  isThinking = false,
+  isGenerating = false,
+  currentResponse = ''
+}) => {
+  console.log('ChatWindow received messages:', messages, 'isThinking:', isThinking, 'isGenerating:', isGenerating);
   return (
     <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
       {messages.length === 0 ? (
@@ -34,62 +39,45 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages, isLoading = false }) 
         </div>
       ) : (
         <div className="space-y-4 w-full">
-          {messages.map((message, index) => {
-            // Find the index of the last assistant message
-            const lastAssistantIndex = messages.map((msg, i) => msg.role === 'assistant' ? i : -1).filter(i => i !== -1).pop() ?? -1;
-            const isLastAssistant = message.role === 'assistant' && index === lastAssistantIndex;
-            
-            return (
-              <div 
-                key={index} 
-                className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                {message.role === 'assistant' && (
-                  <div className="flex-shrink-0 w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm">
-                    <AiOutlineRobot className="w-4 h-4" />
-                  </div>
-                )}
-                <div className={`max-w-[80%] ${message.role === 'user' ? 'bg-blue-500 text-white' : 'bg-white text-gray-800'} rounded-2xl px-4 py-3 shadow-sm`}>
-                  {message.role === 'assistant' && message.content ? (
-                    isLastAssistant ? (
-                      <TypeWriterEffect 
-                        key={`typewriter-${index}-${message.content.length}`} 
-                        text={message.content} 
-                        speed={50}
-                        className=""
-                      />
-                    ) : (
-                      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
-                        {message.content}
-                      </ReactMarkdown>
-                    )
-                  ) : (
-                    message.content
-                  )}
-                  {message.usage && (
-                    <div className="mt-2 pt-2 border-t border-gray-200 text-xs text-gray-500">
-                      <small>
-                        Tokens: In {message.usage.prompt_tokens} | Out {message.usage.completion_tokens} | Total {message.usage.total_tokens}
-                      </small>
-                    </div>
-                  )}
+          {messages.map((message, index) => (
+            <div 
+              key={index} 
+              className={`flex gap-3 ${message.role.toLowerCase() === 'user' ? 'justify-end' : 'justify-start'}`}
+            >
+              {message.role.toLowerCase() === 'assistant' ? (
+                <div className="flex-shrink-0 w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm">
+                  <AiOutlineRobot className="w-4 h-4" />
                 </div>
-                {message.role === 'user' && (
-                  <div className="flex-shrink-0 w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white text-sm">
-                    <AiOutlineUser className="w-4 h-4" />
-                  </div>
-                )}
+              ) : (
+                <div className="flex-shrink-0 w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white text-sm">
+                  <AiOutlineUser className="w-4 h-4" />
+                </div>
+              )}
+              <div className={`max-w-[80%] ${message.role.toLowerCase() === 'user' ? 'bg-blue-500 text-white' : 'bg-white text-gray-800'} rounded-2xl px-4 py-3 shadow-sm`}>
+                {message.content || (message.role.toLowerCase() === 'user' ? '请发送消息' : 'AI 正在思考...')}
               </div>
-            );
-          })}
-          {/* 当isLoading为true时，显示AI思考中状态作为最新消息 */}
-          {isLoading && (
+            </div>
+          ))}
+          {/* 思考阶段 */}
+          {isThinking && (
             <div className="flex gap-3 justify-start">
               <div className="flex-shrink-0 w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm">
                 <AiOutlineRobot className="w-4 h-4" />
               </div>
               <div className="max-w-[80%] bg-white text-gray-800 rounded-2xl px-4 py-3 shadow-sm">
                 <ThinkingIndicator />
+              </div>
+            </div>
+          )}
+          
+          {/* 内容生成阶段 */}
+          {isGenerating && currentResponse && (
+            <div className="flex gap-3 justify-start">
+              <div className="flex-shrink-0 w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm">
+                <AiOutlineRobot className="w-4 h-4" />
+              </div>
+              <div className="max-w-[80%] bg-white text-gray-800 rounded-2xl px-4 py-3 shadow-sm">
+                <TypeWriterEffect text={currentResponse} />
               </div>
             </div>
           )}

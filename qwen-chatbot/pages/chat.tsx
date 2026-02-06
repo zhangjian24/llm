@@ -14,7 +14,9 @@ import { useAppContext } from '../contexts/AppContext';
 
 
 export default function ChatPage() {
-  const [isLoading, setIsLoading] = useState(false);
+  const [isThinking, setIsThinking] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [currentResponse, setCurrentResponse] = useState('');
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   
   // 使用全局状态
@@ -87,15 +89,23 @@ export default function ChatPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputMessage.trim() || isLoading) return;
+    if (!inputMessage.trim() || isThinking || isGenerating) return;
 
     // 添加用户消息
     const userMessage = { role: 'user', content: inputMessage };
     dispatch({ type: 'ADD_MESSAGE', payload: userMessage });
     dispatch({ type: 'SET_INPUT_MESSAGE', payload: '' });
-    setIsLoading(true);
+    
+    // 直接进入思考状态
+    setIsThinking(true);
+    setIsGenerating(false);
+    setCurrentResponse('');
 
     try {
+      // 结束思考，开始生成内容
+      setIsThinking(false);
+      setIsGenerating(true);
+      
       // 准备消息数组，如果选择了角色并且该角色有系统提示，则在开头添加系统消息
       let messagesToSend = [...messages, userMessage];
       
@@ -141,13 +151,13 @@ export default function ChatPage() {
       const decoder = new TextDecoder();
       let assistantMessage: Message = { role: 'assistant', content: '', usage: undefined };
       
-      // 在开始流式传输之前，先添加一个空的助手消息到列表
+      // 在开始流式传输之前，添加一个空的助手消息
       const initialAssistantMessage: Message = { role: 'assistant', content: '', usage: undefined };
       const initialMessages = [...messages, userMessage, initialAssistantMessage];
       dispatch({ type: 'SET_MESSAGES', payload: initialMessages });
 
       // 创建一个引用，用于跟踪当前的消息状态
-      let currentMessages = [...messages, userMessage, { ...initialAssistantMessage }];
+      let currentMessages = [...initialMessages];
       
       while (true) {
         const { done, value } = await reader.read();
@@ -170,17 +180,15 @@ export default function ChatPage() {
               if (parsed.content !== undefined && parsed.content !== null) {
                 // 更新最后一条消息的内容
                 assistantMessage.content += String(parsed.content);
-                // 创建一个新的助手消息
-                const newAssistantMessage = { ...assistantMessage };
-                // 更新当前消息引用
-                currentMessages = [...currentMessages.slice(0, -1), newAssistantMessage];
+                // 更新最后一条消息（即刚添加的空助手消息）
+                currentMessages = [...currentMessages.slice(0, -1), {...assistantMessage}];
                 dispatch({ type: 'SET_MESSAGES', payload: currentMessages });
+                // 同时更新当前响应用于实时显示
+                setCurrentResponse(assistantMessage.content);
               } else if (parsed.usage && typeof parsed.usage === 'object') {
                 // 更新最后一条消息的使用情况
                 assistantMessage.usage = parsed.usage;
-                const newAssistantMessage = { ...assistantMessage };
-                // 更新当前消息引用
-                currentMessages = [...currentMessages.slice(0, -1), newAssistantMessage];
+                currentMessages = [...currentMessages.slice(0, -1), {...assistantMessage}];
                 dispatch({ type: 'SET_MESSAGES', payload: currentMessages });
               }
             } catch (e) {
@@ -243,7 +251,9 @@ export default function ChatPage() {
       
       dispatch({ type: 'ADD_TO_HISTORY', payload: newHistoryEntry }); // 添加到历史记录开头
     } finally {
-      setIsLoading(false);
+      // 生成完成
+      setIsGenerating(false);
+      setCurrentResponse('');
     }
   };
 
@@ -279,13 +289,18 @@ export default function ChatPage() {
           disabled={!!selectedRoleId} // 当选择了角色时，模型配置由角色决定
         />
         
-        <ChatWindow messages={messages} isLoading={isLoading} />
+        <ChatWindow 
+          messages={messages} 
+          isThinking={isThinking}
+          isGenerating={isGenerating}
+          currentResponse={currentResponse}
+        />
         
         <ChatInput 
           inputMessage={inputMessage}
           setInputMessage={(value) => dispatch({ type: 'SET_INPUT_MESSAGE', payload: value })}
           handleSubmit={handleSubmit}
-          isLoading={isLoading}
+          isLoading={isThinking || isGenerating}
         />
         
         <div ref={messagesEndRef} />

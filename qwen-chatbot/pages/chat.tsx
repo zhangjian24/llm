@@ -279,7 +279,7 @@ export default function ChatPage() {
           disabled={!!selectedRoleId} // 当选择了角色时，模型配置由角色决定
         />
         
-        <ChatWindow messages={messages} />
+        <ChatWindow messages={messages} isLoading={isLoading} />
         
         <ChatInput 
           inputMessage={inputMessage}

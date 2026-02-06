@@ -4,6 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
 import { AiOutlineRobot, AiOutlineUser } from 'react-icons/ai';
+import ThinkingIndicator from './ThinkingIndicator';
 
 interface Message {
   role: string;
@@ -17,9 +18,13 @@ interface Message {
 
 interface ChatWindowProps {
   messages: Message[];
+  isLoading?: boolean;
 }
 
-const ChatWindow: React.FC<ChatWindowProps> = ({ messages }) => {
+const ChatWindow: React.FC<ChatWindowProps> = ({ messages, isLoading = false }) => {
+  // 检查是否有最后一条助手消息
+  const hasLastAssistantMessage = messages.some(msg => msg.role === 'assistant');
+  
   return (
     <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
       {messages.length === 0 ? (
@@ -77,6 +82,17 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages }) => {
               </div>
             );
           })}
+          {/* 当isLoading为true时，显示AI思考中状态作为最新消息 */}
+          {isLoading && (
+            <div className="flex gap-3 justify-start">
+              <div className="flex-shrink-0 w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm">
+                <AiOutlineRobot className="w-4 h-4" />
+              </div>
+              <div className="max-w-[80%] bg-white text-gray-800 rounded-2xl px-4 py-3 shadow-sm">
+                <ThinkingIndicator />
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

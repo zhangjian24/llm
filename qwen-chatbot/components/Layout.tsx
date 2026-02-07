@@ -18,7 +18,7 @@ const Layout: React.FC<LayoutProps> = ({ children, showHistoryModal, onHideHisto
       {/* 汉堡菜单按钮 - 当侧边栏收起时显示 */}
       {!sidebarOpen && (
         <button
-          className="fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-md hover:bg-gray-100 transition-colors"
+          className="fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-md hover:bg-gray-100 transition-colors lg:hidden"
           onClick={() => setSidebarOpen(true)}
           aria-label="打开侧边栏"
         >
@@ -26,8 +26,8 @@ const Layout: React.FC<LayoutProps> = ({ children, showHistoryModal, onHideHisto
         </button>
       )}
       
-      <div className={`flex-1 transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-0'} flex flex-col`}>
-        <div className="p-8 w-full flex-1">
+      <div className={`flex-1 transition-all duration-300 ${sidebarOpen ? 'lg:ml-64 ml-0' : 'ml-0'} flex flex-col`}>
+        <div className="p-4 sm:p-6 md:p-8 w-full flex-1">
           {children}
         </div>
       </div>

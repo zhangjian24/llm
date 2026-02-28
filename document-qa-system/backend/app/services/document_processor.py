@@ -1,195 +1,163 @@
+import os
+import uuid
+from typing import List, Dict, Any
+from pathlib import Path
 import PyPDF2
-import docx
-from typing import List, Dict, Any, Optional
-import re
-from app.core.config import settings
-from app.utils.helpers import generate_chunk_id, calculate_tokens
-from app.core.exceptions import DocumentProcessingException
-from app.core.logging_config import get_logger
+from docx import Document
+from bs4 import BeautifulSoup
+import asyncio
 
-logger = get_logger(__name__)
+from app.core.config import settings
+from app.core.logging_config import logger
+from app.core.exceptions import DocumentProcessingError
 
 class DocumentProcessor:
-    """文档处理器"""
+    """文档处理器 - 支持多种文档格式"""
     
     def __init__(self):
-        self.chunk_size = settings.CHUNK_SIZE
-        self.chunk_overlap = settings.CHUNK_OVERLAP
-    
-    def extract_text_from_pdf(self, file_content: bytes) -> str:
-        """从PDF文件提取文本"""
+        self.supported_extensions = settings.allowed_extensions_list
+        self.upload_folder = Path(settings.UPLOAD_FOLDER)
+        self.upload_folder.mkdir(exist_ok=True)
+        
+    async def process_document(self, file_path: str, filename: str) -> Dict[str, Any]:
+        """处理文档并提取文本内容"""
         try:
-            pdf_reader = PyPDF2.PdfReader(file_content)
-            text = ""
+            extension = Path(filename).suffix.lower()
             
-            for page_num in range(len(pdf_reader.pages)):
-                page = pdf_reader.pages[page_num]
-                text += page.extract_text() + "\n"
+            if extension not in self.supported_extensions:
+                raise DocumentProcessingError(f"不支持的文件格式: {extension}")
             
-            return text.strip()
-            
-        except Exception as e:
-            logger.error(f"PDF文本提取失败: {str(e)}")
-            raise DocumentProcessingException(f"PDF处理失败: {str(e)}")
-    
-    def extract_text_from_docx(self, file_content: bytes) -> str:
-        """从DOCX文件提取文本"""
-        try:
-            from io import BytesIO
-            doc = docx.Document(BytesIO(file_content))
-            text = ""
-            
-            for paragraph in doc.paragraphs:
-                text += paragraph.text + "\n"
-            
-            return text.strip()
-            
-        except Exception as e:
-            logger.error(f"DOCX文本提取失败: {str(e)}")
-            raise DocumentProcessingException(f"DOCX处理失败: {str(e)}")
-    
-    def extract_text_from_txt(self, file_content: bytes, encoding: str = 'utf-8') -> str:
-        """从TXT文件提取文本"""
-        try:
-            text = file_content.decode(encoding)
-            return text.strip()
-            
-        except UnicodeDecodeError:
-            # 尝试其他编码
-            try:
-                text = file_content.decode('gbk')
-                return text.strip()
-            except UnicodeDecodeError:
-                raise DocumentProcessingException("不支持的文本编码格式")
-        except Exception as e:
-            logger.error(f"TXT文本提取失败: {str(e)}")
-            raise DocumentProcessingException(f"TXT处理失败: {str(e)}")
-    
-    def clean_text(self, text: str) -> str:
-        """清理文本"""
-        # 移除多余的空白字符
-        text = re.sub(r'\s+', ' ', text)
-        # 移除特殊字符（保留中文、英文、数字和基本标点）
-        text = re.sub(r'[^\u4e00-\u9fff\u3400-\u4dbf\u20000-\u2a6df\u2a700-\u2b73f'
-                      r'\u2b740-\u2b81f\u2b820-\u2ceaf\uf900-\ufaff\u3300-\u33ff'
-                      r'\ufe30-\ufe4f\uf900-\ufaff\u2f800-\u2fa1f'
-                      r'a-zA-Z0-9\s\.,!?;:()"\']', '', text)
-        return text.strip()
-    
-    def split_text_into_chunks(self, text: str, chunk_size: Optional[int] = None, 
-                              overlap: Optional[int] = None) -> List[str]:
-        """将文本分割成块"""
-        if chunk_size is None:
-            chunk_size = self.chunk_size
-        if overlap is None:
-            overlap = self.chunk_overlap
-        
-        if not text:
-            return []
-        
-        chunks = []
-        start = 0
-        
-        while start < len(text):
-            # 确定结束位置
-            end = min(start + chunk_size, len(text))
-            
-            # 如果不是最后一块且需要重叠
-            if end < len(text) and overlap > 0:
-                # 寻找合适的分割点（句子边界）
-                split_point = self._find_best_split_point(text, start, end, overlap)
-                if split_point > start:
-                    end = split_point
-                else:
-                    # 如果找不到合适的分割点，强制在指定位置分割
-                    end = start + chunk_size
-            
-            chunk = text[start:end].strip()
-            if chunk:
-                chunks.append(chunk)
-            
-            # 移动起始位置
-            start = end - overlap if overlap < end else end
-        
-        return chunks
-    
-    def _find_best_split_point(self, text: str, start: int, end: int, 
-                              min_overlap: int) -> int:
-        """寻找最佳分割点"""
-        # 优先寻找句子边界
-        for delimiter in ['。', '！', '？', '.', '!', '?']:
-            pos = text.rfind(delimiter, start + min_overlap, end)
-            if pos != -1:
-                return pos + 1
-        
-        # 寻找段落边界
-        pos = text.rfind('\n', start + min_overlap, end)
-        if pos != -1:
-            return pos + 1
-        
-        # 寻找词语边界
-        pos = text.rfind(' ', start + min_overlap, end)
-        if pos != -1:
-            return pos + 1
-        
-        return end  # 如果找不到合适的位置，就在末尾分割
-    
-    def process_document(self, file_content: bytes, filename: str, 
-                        content_type: str) -> Dict[str, Any]:
-        """处理文档"""
-        try:
-            logger.info(f"开始处理文档: {filename}")
-            
-            # 根据文件类型提取文本
-            if content_type == 'application/pdf':
-                raw_text = self.extract_text_from_pdf(file_content)
-            elif content_type in ['application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                                'application/msword']:
-                raw_text = self.extract_text_from_docx(file_content)
-            elif content_type == 'text/plain':
-                raw_text = self.extract_text_from_txt(file_content)
+            # 根据文件类型选择处理方法
+            if extension == '.pdf':
+                text_content = await self._process_pdf(file_path)
+            elif extension in ['.docx', '.doc']:
+                text_content = await self._process_docx(file_path)
+            elif extension in ['.txt']:
+                text_content = await self._process_txt(file_path)
+            elif extension in ['.html', '.htm']:
+                text_content = await self._process_html(file_path)
             else:
-                raise DocumentProcessingException(f"不支持的文件类型: {content_type}")
+                raise DocumentProcessingError(f"未实现的文件格式处理: {extension}")
             
-            if not raw_text:
-                raise DocumentProcessingException("文档内容为空")
+            # 生成文档ID
+            document_id = str(uuid.uuid4())
             
-            # 清理文本
-            cleaned_text = self.clean_text(raw_text)
-            
-            # 分割成块
-            chunks = self.split_text_into_chunks(cleaned_text)
-            
-            # 生成块数据
-            chunk_data = []
-            for i, chunk in enumerate(chunks):
-                chunk_id = generate_chunk_id(filename, i)
-                tokens = calculate_tokens(chunk)
-                
-                chunk_data.append({
-                    'id': chunk_id,
-                    'text': chunk,
-                    'tokens': tokens,
-                    'chunk_index': i,
-                    'total_chunks': len(chunks)
-                })
+            # 分割文本为chunks
+            chunks = self._split_text_into_chunks(text_content)
             
             result = {
+                'document_id': document_id,
                 'filename': filename,
-                'content_type': content_type,
-                'raw_text_length': len(raw_text),
-                'cleaned_text_length': len(cleaned_text),
-                'chunks': chunk_data,
-                'total_chunks': len(chunks),
-                'total_tokens': sum(chunk['tokens'] for chunk in chunk_data)
+                'content': text_content,
+                'chunks': chunks,
+                'chunk_count': len(chunks),
+                'file_size': os.path.getsize(file_path),
+                'file_extension': extension
             }
             
-            logger.info(f"文档处理完成: {filename}, 共 {len(chunks)} 个文本块")
+            logger.info(f"文档处理完成: {filename}, chunks: {len(chunks)}")
             return result
             
         except Exception as e:
             logger.error(f"文档处理失败 {filename}: {str(e)}")
-            raise DocumentProcessingException(f"文档处理失败: {str(e)}")
+            raise DocumentProcessingError(f"文档处理失败: {str(e)}")
+    
+    async def _process_pdf(self, file_path: str) -> str:
+        """处理PDF文件"""
+        try:
+            text_content = ""
+            with open(file_path, 'rb') as file:
+                pdf_reader = PyPDF2.PdfReader(file)
+                for page_num in range(len(pdf_reader.pages)):
+                    page = pdf_reader.pages[page_num]
+                    text_content += page.extract_text() + "\n"
+            return text_content.strip()
+        except Exception as e:
+            raise DocumentProcessingError(f"PDF处理失败: {str(e)}")
+    
+    async def _process_docx(self, file_path: str) -> str:
+        """处理Word文档"""
+        try:
+            doc = Document(file_path)
+            text_content = ""
+            for paragraph in doc.paragraphs:
+                text_content += paragraph.text + "\n"
+            return text_content.strip()
+        except Exception as e:
+            raise DocumentProcessingError(f"Word文档处理失败: {str(e)}")
+    
+    async def _process_txt(self, file_path: str) -> str:
+        """处理文本文件"""
+        try:
+            with open(file_path, 'r', encoding='utf-8') as file:
+                return file.read().strip()
+        except UnicodeDecodeError:
+            # 尝试其他编码
+            try:
+                with open(file_path, 'r', encoding='gbk') as file:
+                    return file.read().strip()
+            except Exception:
+                raise DocumentProcessingError("文本文件编码无法识别")
+        except Exception as e:
+            raise DocumentProcessingError(f"文本文件处理失败: {str(e)}")
+    
+    async def _process_html(self, file_path: str) -> str:
+        """处理HTML文件"""
+        try:
+            with open(file_path, 'r', encoding='utf-8') as file:
+                soup = BeautifulSoup(file, 'html.parser')
+                # 移除script和style标签
+                for script in soup(["script", "style"]):
+                    script.decompose()
+                return soup.get_text().strip()
+        except Exception as e:
+            raise DocumentProcessingError(f"HTML文件处理失败: {str(e)}")
+    
+    def _split_text_into_chunks(self, text: str, chunk_size: int = 1000, overlap: int = 200) -> List[str]:
+        """将文本分割成chunks用于向量化"""
+        if not text:
+            return []
+        
+        chunks = []
+        words = text.split()
+        
+        for i in range(0, len(words), chunk_size - overlap):
+            chunk_words = words[i:i + chunk_size]
+            chunk = ' '.join(chunk_words)
+            if chunk.strip():  # 确保chunk不为空
+                chunks.append(chunk.strip())
+        
+        return chunks
+    
+    def save_uploaded_file(self, file_data: bytes, filename: str) -> str:
+        """保存上传的文件"""
+        try:
+            # 生成唯一文件名
+            unique_filename = f"{uuid.uuid4()}_{filename}"
+            file_path = self.upload_folder / unique_filename
+            
+            # 写入文件
+            with open(file_path, 'wb') as f:
+                f.write(file_data)
+            
+            logger.info(f"文件保存成功: {file_path}")
+            return str(file_path)
+            
+        except Exception as e:
+            logger.error(f"文件保存失败: {str(e)}")
+            raise DocumentProcessingError(f"文件保存失败: {str(e)}")
+    
+    def delete_document_file(self, file_path: str) -> bool:
+        """删除文档文件"""
+        try:
+            if os.path.exists(file_path):
+                os.remove(file_path)
+                logger.info(f"文件删除成功: {file_path}")
+                return True
+            return False
+        except Exception as e:
+            logger.error(f"文件删除失败: {str(e)}")
+            return False
 
-# 全局文档处理器实例
+# 创建全局实例
 document_processor = DocumentProcessor()

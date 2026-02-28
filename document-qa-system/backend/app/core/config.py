@@ -1,37 +1,42 @@
 from pydantic_settings import BaseSettings
-from typing import Optional
+from typing import List
 import os
 
 class Settings(BaseSettings):
-    # API配置
-    PROJECT_NAME: str = "文档问答系统"
-    VERSION: str = "1.0.0"
-    DEBUG: bool = True
-    
-    # Pinecone配置
+    # Pinecone Configuration
     PINECONE_API_KEY: str
-    PINECONE_ENVIRONMENT: str = "gcp-starter"
     PINECONE_INDEX_NAME: str = "document-qa-index"
     
-    # 千问API配置
-    DASHSCOPE_API_KEY: str
+    # Ollama Configuration
+    OLLAMA_BASE_URL: str = "https://occurrence-pressure-implementing-rose.trycloudflare.com/"
+    EMBEDDING_MODEL: str = "bge-m3"
+    LLM_MODEL: str = "gpt-oss:20b"
     
-    # BGE嵌入模型配置
-    EMBEDDING_MODEL_NAME: str = "BAAI/bge-large-zh-v1.5"
-    EMBEDDING_DIMENSION: int = 1024
+    # Application Settings
+    APP_ENV: str = "development"
+    DEBUG: bool = True
+    LOG_LEVEL: str = "INFO"
     
-    # 文档处理配置
-    CHUNK_SIZE: int = 500
-    CHUNK_OVERLAP: int = 50
+    # Server Configuration
+    HOST: str = "0.0.0.0"
+    PORT: int = 8000
+    
+    # Upload Settings
     MAX_FILE_SIZE: int = 10 * 1024 * 1024  # 10MB
+    ALLOWED_EXTENSIONS: str = ".pdf,.txt,.docx,.doc,.html,.htm"
+    UPLOAD_FOLDER: str = "./uploads"
     
-    # 缓存配置
-    REDIS_HOST: str = "localhost"
-    REDIS_PORT: int = 6379
-    REDIS_DB: int = 0
+    @property
+    def allowed_extensions_list(self) -> List[str]:
+        return [ext.strip() for ext in self.ALLOWED_EXTENSIONS.split(",") if ext.strip()]
+    
+    # Vector Store Settings
+    VECTOR_DIMENSION: int = 768
+    TOP_K_RESULTS: int = 5
+    SCORE_THRESHOLD: float = 0.7
     
     class Config:
-        env_file = ".env"
-        case_sensitive = True
+        env_file = [".env.local", ".env"]  # 优先加载 .env.local，然后是 .env
+        env_file_encoding = "utf-8"
 
 settings = Settings()

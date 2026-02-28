@@ -1,187 +1,150 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks
+from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Query
 from fastapi.responses import JSONResponse
-from typing import List
-import uuid
+import asyncio
+from typing import List, Optional
 from datetime import datetime
-from app.models.schemas import DocumentResponse, DocumentStatus
+
+from app.models.schemas import (
+    DocumentUploadRequest, DocumentUploadResponse, 
+    DocumentListResponse, DocumentInfo
+)
 from app.services.document_processor import document_processor
-from app.services.embedding import encoder
 from app.services.vector_store import vector_store
-from app.utils.helpers import generate_document_id
-from app.core.exceptions import DocumentProcessingException, VectorStoreException
-from app.core.logging_config import get_logger
+from app.core.logging_config import logger
+from app.core.exceptions import DocumentProcessingError, VectorStoreError
 
 router = APIRouter()
-logger = get_logger(__name__)
 
-# 内存中的文档存储（实际项目中应该使用数据库）
-documents_db = {}
-
-async def process_document_background(document_id: str, file_content: bytes, 
-                                    filename: str, content_type: str):
-    """后台处理文档"""
+@router.post("/upload", response_model=DocumentUploadResponse)
+async def upload_document(file: UploadFile = File(...)):
+    """上传并处理文档"""
     try:
-        logger.info(f"开始后台处理文档: {document_id}")
+        # 验证文件大小
+        if file.size > 10 * 1024 * 1024:  # 10MB
+            raise HTTPException(status_code=400, detail="文件大小超过限制(10MB)")
         
-        # 更新文档状态为处理中
-        documents_db[document_id]['status'] = DocumentStatus.PROCESSING
-        
-        # 处理文档
-        processed_data = document_processor.process_document(
-            file_content, filename, content_type
-        )
-        
-        # 生成向量嵌入
-        texts = [chunk['text'] for chunk in processed_data['chunks']]
-        encoded_chunks = encoder.batch_encode_with_ids(texts)
-        
-        # 准备向量数据
-        vectors = []
-        for chunk_data, encoded_chunk in zip(processed_data['chunks'], encoded_chunks):
-            vector_data = {
-                'id': encoded_chunk['id'],
-                'values': encoded_chunk['embedding'],
-                'metadata': {
-                    'document_id': document_id,
-                    'filename': filename,
-                    'chunk_index': chunk_data['chunk_index'],
-                    'total_chunks': chunk_data['total_chunks'],
-                    'text': chunk_data['text']
-                }
-            }
-            vectors.append(vector_data)
-        
-        # 存储到向量数据库
-        vector_store.upsert_vectors(vectors)
-        
-        # 更新文档状态为已处理
-        documents_db[document_id].update({
-            'status': DocumentStatus.PROCESSED,
-            'processed_at': datetime.now(),
-            'chunk_count': len(processed_data['chunks']),
-            'total_tokens': processed_data['total_tokens']
-        })
-        
-        logger.info(f"文档处理完成: {document_id}")
-        
-    except Exception as e:
-        logger.error(f"文档处理失败 {document_id}: {str(e)}")
-        documents_db[document_id]['status'] = DocumentStatus.FAILED
-        documents_db[document_id]['error_message'] = str(e)
-
-@router.post("/upload", response_model=DocumentResponse)
-async def upload_document(
-    file: UploadFile = File(...),
-    background_tasks: BackgroundTasks = BackgroundTasks()
-):
-    """上传文档"""
-    try:
         # 验证文件类型
-        allowed_types = [
-            'application/pdf',
-            'text/plain',
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            'application/msword'
-        ]
+        if not file.filename:
+            raise HTTPException(status_code=400, detail="文件名不能为空")
         
-        if file.content_type not in allowed_types:
-            raise HTTPException(
-                status_code=400,
-                detail=f"不支持的文件类型: {file.content_type}"
-            )
+        extension = "." + file.filename.split(".")[-1].lower()
+        if extension not in [ext.lower() for ext in [".pdf", ".txt", ".docx", ".doc", ".html", ".htm"]]:
+            raise HTTPException(status_code=400, detail=f"不支持的文件格式: {extension}")
         
         # 读取文件内容
         file_content = await file.read()
         
-        # 生成文档ID
-        document_id = generate_document_id(file.filename, file_content)
+        # 保存文件
+        file_path = document_processor.save_uploaded_file(file_content, file.filename)
         
-        # 检查文档是否已存在
-        if document_id in documents_db:
-            return DocumentResponse(**documents_db[document_id])
+        # 异步处理文档
+        processing_result = await document_processor.process_document(file_path, file.filename)
         
-        # 创建文档记录
-        document_record = {
-            'id': document_id,
-            'filename': file.filename,
-            'content_type': file.content_type,
-            'size': len(file_content),
-            'status': DocumentStatus.UPLOADED,
-            'created_at': datetime.now(),
-            'processed_at': None
+        # 存储到向量数据库
+        metadata = {
+            "filename": file.filename,
+            "file_size": len(file_content),
+            "upload_time": datetime.now().isoformat()
         }
         
-        documents_db[document_id] = document_record
-        
-        # 添加后台处理任务
-        background_tasks.add_task(
-            process_document_background,
-            document_id,
-            file_content,
-            file.filename,
-            file.content_type
+        chunk_ids = await vector_store.store_document_chunks(
+            document_id=processing_result['document_id'],
+            chunks=processing_result['chunks'],
+            metadata=metadata
         )
         
-        logger.info(f"文档上传成功: {document_id}")
-        return DocumentResponse(**document_record)
+        return DocumentUploadResponse(
+            document_id=processing_result['document_id'],
+            filename=file.filename,
+            status="success",
+            message=f"文档上传并处理成功，共生成 {len(chunk_ids)} 个文本块"
+        )
         
-    except Exception as e:
-        logger.error(f"文档上传失败: {str(e)}")
+    except DocumentProcessingError as e:
+        logger.error(f"文档处理错误: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
+    except VectorStoreError as e:
+        logger.error(f"向量存储错误: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        logger.error(f"上传文档时发生未知错误: {str(e)}")
+        raise HTTPException(status_code=500, detail="服务器内部错误")
 
-@router.get("/{document_id}", response_model=DocumentResponse)
-async def get_document(document_id: str):
-    """获取文档信息"""
-    if document_id not in documents_db:
-        raise HTTPException(status_code=404, detail="文档未找到")
-    
-    return DocumentResponse(**documents_db[document_id])
-
-@router.get("/", response_model=List[DocumentResponse])
+@router.get("/list", response_model=DocumentListResponse)
 async def list_documents():
-    """列出所有文档"""
-    documents = [
-        DocumentResponse(**doc) for doc in documents_db.values()
-    ]
-    return sorted(documents, key=lambda x: x.created_at, reverse=True)
+    """列出所有已上传的文档"""
+    try:
+        documents_info = await vector_store.list_documents()
+        
+        documents = []
+        for doc_info in documents_info:
+            # 获取实际文件信息
+            chunk_count = await vector_store.get_document_chunk_count(doc_info["document_id"])
+            
+            documents.append(DocumentInfo(
+                document_id=doc_info["document_id"],
+                filename=doc_info["filename"],
+                upload_time=datetime.fromisoformat(doc_info["created_at"]) if doc_info["created_at"] else datetime.now(),
+                status="processed",
+                size=0  # TODO: 从元数据中获取实际文件大小
+            ))
+        
+        return DocumentListResponse(
+            documents=documents,
+            total=len(documents)
+        )
+        
+    except VectorStoreError as e:
+        logger.error(f"获取文档列表错误: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        logger.error(f"获取文档列表时发生未知错误: {str(e)}")
+        raise HTTPException(status_code=500, detail="服务器内部错误")
 
 @router.delete("/{document_id}")
 async def delete_document(document_id: str):
-    """删除文档"""
-    if document_id not in documents_db:
-        raise HTTPException(status_code=404, detail="文档未找到")
-    
+    """删除指定文档"""
     try:
-        # 从向量数据库删除相关向量
-        # 这里需要实现根据document_id查找并删除相关向量的逻辑
-        pass
+        # 从向量数据库删除
+        await vector_store.delete_document_chunks(document_id)
         
-        # 删除文档记录
-        del documents_db[document_id]
+        # TODO: 从文件系统删除实际文件
+        # 这需要在文档元数据中存储文件路径
         
-        logger.info(f"文档删除成功: {document_id}")
-        return {"message": "文档删除成功"}
+        return JSONResponse(
+            status_code=200,
+            content={"message": f"文档 {document_id} 删除成功"}
+        )
         
-    except Exception as e:
-        logger.error(f"文档删除失败 {document_id}: {str(e)}")
+    except VectorStoreError as e:
+        logger.error(f"删除文档错误: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
-
-@router.get("/{document_id}/stats")
-async def get_document_stats(document_id: str):
-    """获取文档统计信息"""
-    if document_id not in documents_db:
-        raise HTTPException(status_code=404, detail="文档未找到")
-    
-    document = documents_db[document_id]
-    
-    # 获取向量统计
-    try:
-        vector_stats = vector_store.get_stats()
-        # 这里可以添加更具体的文档相关统计
     except Exception as e:
-        vector_stats = {"error": str(e)}
-    
-    return {
-        "document": document,
-        "vector_stats": vector_stats
-    }
+        logger.error(f"删除文档时发生未知错误: {str(e)}")
+        raise HTTPException(status_code=500, detail="服务器内部错误")
+
+@router.get("/{document_id}/info")
+async def get_document_info(document_id: str):
+    """获取文档详细信息"""
+    try:
+        chunk_count = await vector_store.get_document_chunk_count(document_id)
+        
+        if chunk_count == 0:
+            raise HTTPException(status_code=404, detail="文档不存在")
+        
+        # TODO: 返回更详细的文档信息
+        return JSONResponse(
+            status_code=200,
+            content={
+                "document_id": document_id,
+                "chunk_count": chunk_count,
+                "status": "processed"
+            }
+        )
+        
+    except VectorStoreError as e:
+        logger.error(f"获取文档信息错误: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        logger.error(f"获取文档信息时发生未知错误: {str(e)}")
+        raise HTTPException(status_code=500, detail="服务器内部错误")

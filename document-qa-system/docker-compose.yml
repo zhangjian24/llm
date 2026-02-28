@@ -2,39 +2,52 @@ version: '3.8'
 
 services:
   backend:
-    build: ./backend
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
     ports:
       - "8000:8000"
     environment:
       - PINECONE_API_KEY=${PINECONE_API_KEY}
       - PINECONE_ENVIRONMENT=${PINECONE_ENVIRONMENT}
       - PINECONE_INDEX_NAME=${PINECONE_INDEX_NAME}
-      - DASHSCOPE_API_KEY=${DASHSCOPE_API_KEY}
-      - REDIS_HOST=redis
-    depends_on:
-      - redis
+      - QWEN_API_KEY=${QWEN_API_KEY}
+      - QWEN_BASE_URL=${QWEN_BASE_URL}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL}
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL}
+      - APP_ENV=production
+      - DEBUG=False
     volumes:
-      - ./backend:/app
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+      - ./backend/uploads:/app/uploads
+      - ./backend/logs:/app/logs
+    depends_on:
+      - ollama
+    networks:
+      - app-network
 
   frontend:
-    build: ./frontend
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
     ports:
-      - "3000:3000"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    environment:
-      - NODE_ENV=development
+      - "3000:80"
     depends_on:
       - backend
+    networks:
+      - app-network
 
-  redis:
-    image: redis:7-alpine
+  ollama:
+    image: ollama/ollama:latest
     ports:
-      - "6379:6379"
+      - "11434:11434"
     volumes:
-      - redis_data:/data
+      - ollama-data:/root/.ollama
+    networks:
+      - app-network
 
 volumes:
-  redis_data:
+  ollama-data:
+
+networks:
+  app-network:
+    driver: bridge

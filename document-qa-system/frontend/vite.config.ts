@@ -10,7 +10,12 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:8000',
         changeOrigin: true,
+        secure: false,
       }
     }
+  },
+  build: {
+    outDir: 'dist',
+    sourcemap: true,
   }
 })

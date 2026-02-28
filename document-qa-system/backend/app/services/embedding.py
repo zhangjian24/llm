@@ -1,158 +1,149 @@
-from sentence_transformers import SentenceTransformer
-import torch
-from typing import List, Union
-import numpy as np
+import requests
+import json
+from typing import List, Dict, Any, Optional
+import asyncio
+from langchain.embeddings.base import Embeddings
+
 from app.core.config import settings
-from app.core.exceptions import VectorStoreException
-from app.core.logging_config import get_logger
+from app.core.logging_config import logger
+from app.core.exceptions import EmbeddingError
 
-logger = get_logger(__name__)
-
-class BGEEncoder:
-    """BGE嵌入编码器"""
+class OllamaEmbeddings(Embeddings):
+    """基于Ollama的BGE嵌入模型"""
     
     def __init__(self):
-        self.model_name = settings.EMBEDDING_MODEL_NAME
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.model = None
-        self._load_model()
-    
-    def _load_model(self):
-        """加载BGE模型"""
+        self.base_url = settings.OLLAMA_BASE_URL
+        self.model = settings.EMBEDDING_MODEL
+        self.dimension = settings.VECTOR_DIMENSION
+        
+    async def initialize(self):
+        """初始化嵌入模型"""
         try:
-            logger.info(f"正在加载BGE模型: {self.model_name}")
-            logger.info(f"使用设备: {self.device}")
+            # 检查Ollama服务是否可用
+            response = requests.get(f"{self.base_url}/api/tags", timeout=10)
+            if response.status_code != 200:
+                raise EmbeddingError("无法连接到Ollama服务")
             
-            self.model = SentenceTransformer(
-                self.model_name,
-                device=self.device
-            )
+            # 检查模型是否存在（支持带标签的模型名匹配）
+            models_data = response.json()
+            models = models_data.get('models', [])
+            model_names = [model['name'] for model in models]
             
-            # 预热模型
-            self.model.encode(["测试文本"])
-            logger.info("BGE模型加载成功")
+            # 打印可用模型列表用于调试
+            logger.info(f"Ollama服务返回的可用模型列表: {model_names}")
+            logger.debug(f"完整模型信息: {models_data}")
+            
+            # 检查精确匹配或基础名称匹配
+            model_found = False
+            for model_name in model_names:
+                # 精确匹配
+                if model_name == self.model:
+                    model_found = True
+                    break
+                # 基础名称匹配（忽略标签部分）
+                base_name = model_name.split(':')[0]
+                if base_name == self.model:
+                    model_found = True
+                    logger.info(f"通过基础名称匹配找到模型: {model_name}")
+                    break
+            
+            if not model_found:
+                logger.warning(f"模型 {self.model} 未找到，尝试拉取...")
+                self._pull_model()
+            
+            logger.info(f"BGE嵌入模型初始化成功: {self.model}")
             
         except Exception as e:
-            logger.error(f"BGE模型加载失败: {str(e)}")
-            raise VectorStoreException(f"BGE模型加载失败: {str(e)}")
+            logger.error(f"嵌入模型初始化失败: {str(e)}")
+            raise EmbeddingError(f"嵌入模型初始化失败: {str(e)}")
     
-    def encode_single(self, text: str, normalize: bool = True) -> np.ndarray:
-        """编码单个文本"""
+    def _pull_model(self):
+        """拉取模型"""
         try:
-            if not text.strip():
-                raise ValueError("输入文本不能为空")
-            
-            embedding = self.model.encode(
-                text,
-                convert_to_numpy=True,
-                normalize_embeddings=normalize
+            response = requests.post(
+                f"{self.base_url}/api/pull",
+                json={"name": self.model},
+                timeout=300  # 5分钟超时
             )
+            if response.status_code != 200:
+                raise EmbeddingError(f"模型拉取失败: {response.text}")
+            logger.info(f"模型 {self.model} 拉取成功")
+        except Exception as e:
+            raise EmbeddingError(f"模型拉取过程中出错: {str(e)}")
+    
+    def embed_documents(self, texts: List[str]) -> List[List[float]]:
+        """批量嵌入文档"""
+        try:
+            embeddings = []
+            for text in texts:
+                embedding = self._get_embedding(text)
+                embeddings.append(embedding)
+            return embeddings
+        except Exception as e:
+            logger.error(f"文档嵌入失败: {str(e)}")
+            raise EmbeddingError(f"文档嵌入失败: {str(e)}")
+    
+    def embed_query(self, text: str) -> List[float]:
+        """嵌入查询文本"""
+        try:
+            return self._get_embedding(text)
+        except Exception as e:
+            logger.error(f"查询嵌入失败: {str(e)}")
+            raise EmbeddingError(f"查询嵌入失败: {str(e)}")
+    
+    def _get_embedding(self, text: str) -> List[float]:
+        """获取单个文本的嵌入向量"""
+        try:
+            payload = {
+                "model": self.model,
+                "prompt": text
+            }
+            
+            response = requests.post(
+                f"{self.base_url}/api/embeddings",
+                json=payload,
+                timeout=30
+            )
+            
+            if response.status_code != 200:
+                raise EmbeddingError(f"嵌入API调用失败: {response.text}")
+            
+            result = response.json()
+            embedding = result.get('embedding')
+            
+            if not embedding:
+                raise EmbeddingError("未获取到有效的嵌入向量")
+            
+            # 确保维度正确
+            if len(embedding) != self.dimension:
+                logger.warning(f"嵌入维度不匹配: 期望{self.dimension}, 实际{len(embedding)}")
+                # 截断或填充到正确维度
+                if len(embedding) > self.dimension:
+                    embedding = embedding[:self.dimension]
+                else:
+                    embedding.extend([0.0] * (self.dimension - len(embedding)))
             
             return embedding
             
+        except requests.exceptions.RequestException as e:
+            raise EmbeddingError(f"网络请求失败: {str(e)}")
         except Exception as e:
-            logger.error(f"文本编码失败: {str(e)}")
-            raise VectorStoreException(f"文本编码失败: {str(e)}")
+            raise EmbeddingError(f"嵌入生成失败: {str(e)}")
     
-    def encode_batch(self, texts: List[str], batch_size: int = 32, 
-                    normalize: bool = True) -> List[np.ndarray]:
-        """批量编码文本"""
+    async def batch_embed_documents(self, texts: List[str], batch_size: int = 10) -> List[List[float]]:
+        """批量嵌入文档（异步版本）"""
         try:
-            if not texts:
-                return []
-            
-            # 过滤空文本
-            valid_texts = [text for text in texts if text.strip()]
-            if not valid_texts:
-                raise ValueError("没有有效的输入文本")
-            
-            embeddings = self.model.encode(
-                valid_texts,
-                batch_size=batch_size,
-                convert_to_numpy=True,
-                normalize_embeddings=normalize,
-                show_progress_bar=True
-            )
-            
-            # 转换为列表格式
-            if isinstance(embeddings, np.ndarray):
-                return [embeddings[i] for i in range(len(embeddings))]
-            else:
-                return embeddings
-                
+            embeddings = []
+            for i in range(0, len(texts), batch_size):
+                batch = texts[i:i + batch_size]
+                batch_embeddings = await asyncio.gather(*[
+                    asyncio.to_thread(self._get_embedding, text) for text in batch
+                ])
+                embeddings.extend(batch_embeddings)
+            return embeddings
         except Exception as e:
-            logger.error(f"批量文本编码失败: {str(e)}")
-            raise VectorStoreException(f"批量文本编码失败: {str(e)}")
-    
-    def get_embedding_dimension(self) -> int:
-        """获取嵌入维度"""
-        return self.model.get_sentence_embedding_dimension()
-    
-    def similarity(self, text1: str, text2: str) -> float:
-        """计算两个文本的相似度"""
-        try:
-            emb1 = self.encode_single(text1)
-            emb2 = self.encode_single(text2)
-            
-            # 计算余弦相似度
-            similarity = np.dot(emb1, emb2) / (np.linalg.norm(emb1) * np.linalg.norm(emb2))
-            return float(similarity)
-            
-        except Exception as e:
-            logger.error(f"相似度计算失败: {str(e)}")
-            raise VectorStoreException(f"相似度计算失败: {str(e)}")
+            logger.error(f"批量文档嵌入失败: {str(e)}")
+            raise EmbeddingError(f"批量文档嵌入失败: {str(e)}")
 
-class HybridEncoder:
-    """混合编码器（支持多种编码方式）"""
-    
-    def __init__(self):
-        self.bge_encoder = BGEEncoder()
-        self.dimension = self.bge_encoder.get_embedding_dimension()
-    
-    def encode_with_metadata(self, text: str, metadata: dict = None) -> dict:
-        """编码文本并附带元数据"""
-        try:
-            embedding = self.bge_encoder.encode_single(text)
-            
-            result = {
-                'text': text,
-                'embedding': embedding,
-                'dimension': self.dimension
-            }
-            
-            if metadata:
-                result['metadata'] = metadata
-                
-            return result
-            
-        except Exception as e:
-            logger.error(f"带元数据编码失败: {str(e)}")
-            raise VectorStoreException(f"带元数据编码失败: {str(e)}")
-    
-    def batch_encode_with_ids(self, texts: List[str], 
-                            ids: List[str] = None) -> List[dict]:
-        """批量编码并生成ID"""
-        try:
-            if not texts:
-                return []
-            
-            embeddings = self.bge_encoder.encode_batch(texts)
-            
-            results = []
-            for i, (text, embedding) in enumerate(zip(texts, embeddings)):
-                result = {
-                    'id': ids[i] if ids and i < len(ids) else f"chunk_{i}",
-                    'text': text,
-                    'embedding': embedding,
-                    'dimension': self.dimension
-                }
-                results.append(result)
-            
-            return results
-            
-        except Exception as e:
-            logger.error(f"批量编码失败: {str(e)}")
-            raise VectorStoreException(f"批量编码失败: {str(e)}")
-
-# 全局编码器实例
-encoder = HybridEncoder()
+# 创建全局实例
+embedding_service = OllamaEmbeddings()

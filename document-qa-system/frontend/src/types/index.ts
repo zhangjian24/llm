@@ -1,64 +1,45 @@
 export interface Document {
-  id: string;
+  document_id: string;
   filename: string;
-  content_type: string;
+  upload_time: string;
+  status: string;
   size: number;
-  status: 'uploaded' | 'processing' | 'processed' | 'failed';
-  created_at: string;
-  processed_at?: string;
-  chunk_count?: number;
-  total_tokens?: number;
 }
 
-export interface ChatMessage {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: Date;
-  sources?: Source[];
+export interface DocumentUploadResponse {
+  document_id: string;
+  filename: string;
+  status: string;
+  message: string;
+}
+
+export interface QueryRequest {
+  query: string;
+  document_ids?: string[];
+  top_k?: number;
 }
 
 export interface Source {
   document_id: string;
   filename: string;
-  content: string;
   score: number;
+  chunk_count: number;
 }
 
-export interface ChatRequest {
+export interface QueryResponse {
   query: string;
-  document_ids?: string[];
-  history?: Array<{
-    role: string;
-    content: string;
-    timestamp: string;
-  }>;
-}
-
-export interface ChatResponse {
   answer: string;
   sources: Source[];
   confidence: number;
 }
 
-export interface SearchResult {
-  document_id: string;
-  content: string;
-  score: number;
-  metadata: Record<string, any>;
-}
-
-export interface QuerySuggestion {
-  suggestions: string[];
-}
-
-export interface DocumentStats {
-  document: Document;
-  vector_stats: Record<string, any>;
-}
-
-export interface UploadProgress {
-  loaded: number;
+export interface DocumentListResponse {
+  documents: Document[];
   total: number;
-  percentage: number;
+}
+
+export interface HealthCheckResponse {
+  status: string;
+  timestamp: string;
+  services: Record<string, string>;
 }

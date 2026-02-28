@@ -1,191 +1,175 @@
-import dashscope
+import openai
 from typing import List, Dict, Any, Optional
 import asyncio
+from langchain_core.prompts import PromptTemplate
+from langchain_ollama import OllamaLLM
+from langchain_core.runnables import RunnablePassthrough
+from langchain_core.output_parsers import StrOutputParser
+
 from app.core.config import settings
+from app.core.logging_config import logger
+from app.core.exceptions import LLMError
 from app.services.vector_store import vector_store
-from app.services.embedding import encoder
-from app.models.schemas import ChatMessage
-from app.core.exceptions import LLMException, VectorStoreException
-from app.core.logging_config import get_logger
-from app.utils.helpers import truncate_text
 
-logger = get_logger(__name__)
-
-class QAEngine:
-    """问答引擎"""
+class QAManager:
+    """问答管理器 - 集成Ollama gpt-oss:20b模型和LangChain"""
     
     def __init__(self):
-        self.model_name = "qwen-max"
-        dashscope.api_key = settings.DASHSCOPE_API_KEY
-        self.prompt_template = """
-你是一个专业的文档问答助手。请根据提供的文档内容回答用户的问题。
+        self.ollama_base_url = settings.OLLAMA_BASE_URL
+        self.llm_model = settings.LLM_MODEL
+        
+        # 初始化LangChain组件
+        self._initialize_langchain()
+    
+    def _initialize_langchain(self):
+        """初始化LangChain组件"""
+        try:
+            # 初始化Ollama模型
+            self.llm = OllamaLLM(
+                model=self.llm_model,
+                base_url=self.ollama_base_url,
+                temperature=0.7
+            )
+            
+            # 定义Prompt模板
+            self.prompt_template = PromptTemplate.from_template(
+                """你是一个专业的文档问答助手。请根据以下文档内容回答用户的问题。
 
 文档内容：
 {context}
 
 用户问题：{question}
 
-请根据以上文档内容回答问题。如果文档中没有相关信息，请明确说明。
-回答要求：
-1. 准确、简洁地回答问题
-2. 引用相关的文档内容作为依据
-3. 如果不确定答案，请如实说明
-"""
-    
-    async def search_similar_documents(self, query: str, top_k: int = 5, 
-                                     document_ids: Optional[List[str]] = None) -> List[Dict[str, Any]]:
-        """搜索相似文档"""
-        try:
-            # 生成查询向量
-            query_embedding = encoder.bge_encoder.encode_single(query)
-            
-            # 构建过滤条件
-            filter_dict = None
-            if document_ids:
-                filter_dict = {"document_id": {"$in": document_ids}}
-            
-            # 执行向量搜索
-            search_results = vector_store.query_vectors(
-                query_vector=query_embedding.tolist(),
-                top_k=top_k,
-                filter_dict=filter_dict
+请根据上述文档内容，给出准确、详细的回答。如果文档中没有相关信息，请明确说明。
+回答："""
             )
             
-            # 处理结果
-            results = []
-            for result in search_results:
-                results.append({
-                    'document_id': result['metadata']['document_id'],
-                    'filename': result['metadata']['filename'],
-                    'content': result['metadata']['text'],
-                    'score': result['score'],
-                    'chunk_index': result['metadata']['chunk_index'],
-                    'metadata': result['metadata']
-                })
-            
-            logger.info(f"向量搜索完成，找到 {len(results)} 个相关文档片段")
-            return results
+            logger.info("LangChain组件初始化成功")
             
         except Exception as e:
-            logger.error(f"文档搜索失败: {str(e)}")
-            raise VectorStoreException(f"文档搜索失败: {str(e)}")
+            logger.error(f"LangChain初始化失败: {str(e)}")
+            raise LLMError(f"LangChain初始化失败: {str(e)}")
     
-    def _build_context(self, search_results: List[Dict[str, Any]], max_tokens: int = 2000) -> str:
-        """构建上下文"""
+    async def answer_question(self, query: str, document_ids: Optional[List[str]] = None,
+                            top_k: int = 5) -> Dict[str, Any]:
+        """回答用户问题"""
+        try:
+            # 1. 从向量数据库检索相关文档chunks
+            similar_chunks = await vector_store.search_similar_chunks(
+                query=query,
+                top_k=top_k,
+                document_ids=document_ids
+            )
+            
+            if not similar_chunks:
+                return {
+                    "query": query,
+                    "answer": "抱歉，我没有找到相关的文档内容来回答您的问题。",
+                    "sources": [],
+                    "confidence": 0.0
+                }
+            
+            # 2. 构建上下文
+            context = self._build_context(similar_chunks)
+            
+            # 3. 使用LangChain链生成回答
+            chain = (
+                {"context": lambda x: context, "question": lambda x: query}
+                | self.prompt_template
+                | self.llm
+                | StrOutputParser()
+            )
+            
+            answer = await chain.ainvoke({})
+            
+            # 4. 构建响应
+            sources = self._format_sources(similar_chunks)
+            confidence = self._calculate_confidence(similar_chunks)
+            
+            return {
+                "query": query,
+                "answer": answer,
+                "sources": sources,
+                "confidence": confidence
+            }
+            
+        except Exception as e:
+            logger.error(f"问答处理失败: {str(e)}")
+            raise LLMError(f"问答处理失败: {str(e)}")
+    
+    def _build_context(self, chunks: List[Dict[str, Any]]) -> str:
+        """构建问答上下文"""
         context_parts = []
-        total_tokens = 0
-        
-        for result in search_results:
-            content = result['content']
-            tokens = len(content) // 4  # 粗略估算token数
-            
-            if total_tokens + tokens > max_tokens:
-                # 截断最后一个内容以适应token限制
-                remaining_tokens = max_tokens - total_tokens
-                if remaining_tokens > 50:  # 至少保留一些内容
-                    truncated_content = truncate_text(content, remaining_tokens * 4)
-                    context_parts.append(f"[来自 {result['filename']}]: {truncated_content}")
-                break
-            
-            context_parts.append(f"[来自 {result['filename']}]: {content}")
-            total_tokens += tokens
+        for chunk in chunks:
+            chunk_text = chunk.get("chunk_text", "")
+            if chunk_text:
+                context_parts.append(f"[文档片段 {chunk['chunk_index']}]: {chunk_text}")
         
         return "\n\n".join(context_parts)
     
-    def _format_history(self, history: Optional[List[ChatMessage]]) -> str:
-        """格式化对话历史"""
-        if not history:
-            return ""
+    def _format_sources(self, chunks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """格式化来源信息"""
+        sources = []
+        processed_docs = set()
         
-        history_text = "对话历史：\n"
-        for msg in history[-5:]:  # 只保留最近5轮对话
-            role = "用户" if msg.role == "user" else "助手"
-            history_text += f"{role}: {msg.content}\n"
-        
-        return history_text + "\n"
-    
-    async def answer_question(self, query: str, document_ids: Optional[List[str]] = None,
-                            history: Optional[List[ChatMessage]] = None) -> Dict[str, Any]:
-        """回答问题"""
-        try:
-            logger.info(f"开始处理问题: {query}")
-            
-            # 搜索相关文档
-            search_results = await self.search_similar_documents(query, top_k=10, document_ids=document_ids)
-            
-            if not search_results:
-                return {
-                    'answer': "抱歉，在文档中没有找到相关信息来回答您的问题。",
-                    'sources': [],
-                    'confidence': 0.0
-                }
-            
-            # 构建上下文
-            context = self._build_context(search_results)
-            
-            # 构建完整提示词
-            prompt = self.prompt_template.format(
-                context=context,
-                question=query
-            )
-            
-            # 添加对话历史（如果有）
-            if history:
-                history_text = self._format_history(history)
-                prompt = history_text + prompt
-            
-            # 调用千问API
-            logger.info("调用千问API...")
-            response = dashscope.Generation.call(
-                model=self.model_name,
-                prompt=prompt,
-                max_tokens=1000,
-                temperature=0.7
-            )
-            
-            if response.status_code != 200:
-                raise LLMException(f"API调用失败: {response.message}")
-            
-            answer = response.output.text.strip()
-            
-            # 提取引用源
-            sources = []
-            for result in search_results[:3]:  # 最多返回3个引用源
+        for chunk in chunks:
+            doc_id = chunk.get("document_id")
+            if doc_id and doc_id not in processed_docs:
                 sources.append({
-                    'document_id': result['document_id'],
-                    'filename': result['filename'],
-                    'content': truncate_text(result['content'], 200),
-                    'score': result['score']
+                    "document_id": doc_id,
+                    "filename": chunk.get("metadata", {}).get("filename", "Unknown"),
+                    "score": chunk.get("score", 0),
+                    "chunk_count": len([c for c in chunks if c.get("document_id") == doc_id])
                 })
-            
-            # 计算置信度（基于搜索结果的相似度）
-            avg_score = sum(result['score'] for result in search_results) / len(search_results)
-            confidence = min(avg_score * 1.2, 1.0)  # 调整置信度范围
-            
-            logger.info(f"问题回答完成，置信度: {confidence:.2f}")
-            
-            return {
-                'answer': answer,
-                'sources': sources,
-                'confidence': confidence
-            }
-            
-        except LLMException:
-            raise
-        except VectorStoreException:
-            raise
-        except Exception as e:
-            logger.error(f"问答处理失败: {str(e)}")
-            raise LLMException(f"问答处理失败: {str(e)}")
+                processed_docs.add(doc_id)
+        
+        # 按分数排序
+        sources.sort(key=lambda x: x["score"], reverse=True)
+        return sources
     
-    async def batch_answer_questions(self, questions: List[str], 
-                                   document_ids: Optional[List[str]] = None) -> List[Dict[str, Any]]:
-        """批量回答问题"""
-        tasks = [
-            self.answer_question(question, document_ids)
-            for question in questions
-        ]
-        return await asyncio.gather(*tasks)
+    def _calculate_confidence(self, chunks: List[Dict[str, Any]]) -> float:
+        """计算回答置信度"""
+        if not chunks:
+            return 0.0
+        
+        # 基于最高分计算置信度
+        max_score = max(chunk.get("score", 0) for chunk in chunks)
+        
+        # 考虑匹配的chunks数量
+        match_count = len(chunks)
+        count_factor = min(match_count / 3.0, 1.0)  # 最多3个chunks认为是满分
+        
+        # 综合置信度计算
+        confidence = max_score * 0.7 + count_factor * 0.3
+        return round(confidence, 3)
+    
+    async def get_chat_history_summary(self, query: str, history: List[Dict[str, str]]) -> str:
+        """获取对话历史摘要（用于上下文增强）"""
+        try:
+            if not history:
+                return ""
+            
+            # 构建历史对话摘要提示
+            history_text = "\n".join([
+                f"用户: {item['query']}\n助手: {item['answer']}" 
+                for item in history[-3:]  # 只取最近3轮对话
+            ])
+            
+            summary_prompt = f"""请总结以下对话历史的关键信息：
 
-# 全局问答引擎实例
-qa_engine = QAEngine()
+{history_text}
+
+用户当前问题: {query}
+
+请简要总结对话主题和关键信息，帮助更好地理解当前问题的背景。"""
+
+            # 对于对话历史摘要，我们使用相同的Ollama模型
+            response = self.llm.invoke(summary_prompt)
+            return response.strip()
+            
+        except Exception as e:
+            logger.warning(f"对话历史摘要生成失败: {str(e)}")
+            return ""
+
+# 创建全局实例
+qa_manager = QAManager()

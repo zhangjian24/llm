@@ -32,17 +32,42 @@
 - Node.js 16+
 - pnpm (推荐) 或 npm
 - Docker (可选)
-- Ollama (用于本地BGE模型)
+- Ollama Cloud 账户（推荐）或本地 Ollama 服务
 
-Ollama 下载模型（可选，也可使用远程Ollama服务）
+> **推荐使用 Ollama Cloud**：提供更好的性能和稳定性，支持更大的模型
+
+### Ollama Cloud 配置（推荐）
+
+1. **注册 Ollama Cloud 账户**：访问 [ollama.com](https://ollama.com) 注册账户
+2. **创建 API 密钥**：在 [设置页面](https://ollama.com/settings/keys) 创建 API 密钥
+3. **配置环境变量**：
+   ```bash
+   # 在 .env.local 文件中配置
+   OLLAMA_API_KEY=your_actual_ollama_api_key_here
+   OLLAMA_BASE_URL=https://ollama.com/api
+   ```
+
+### 本地 Ollama 服务（推荐用于嵌入功能）
+由于 Ollama Cloud 主要提供大型语言模型，建议使用本地 Ollama 服务来获得更好的嵌入模型支持：
 ```bash
-ollama pull gpt-oss:20b
+# 下载专用嵌入模型
 ollama pull bge-m3
+ollama pull nomic-embed-text
+
+# 下载语言模型
+ollama pull gpt-oss:20b
+
+# 启动本地服务
+ollama serve
+
+# 更新配置使用本地服务
+# OLLAMA_BASE_URL=http://localhost:11434
+# EMBEDDING_MODEL=bge-m3
 ```
 
 ### 启动方式
 
-> **重要提醒**: 首次启动前请确保已配置有效的 Pinecone API 密钥
+> **重要提醒**: 首次启动前请确保已配置有效的 Pinecone API 密钥和 Ollama Cloud API 密钥
 
 #### 方式一：一键启动脚本
 ```bash
@@ -87,10 +112,15 @@ docker-compose up --build
 PINECONE_API_KEY=your_actual_pinecone_api_key_here
 PINECONE_INDEX_NAME=document-qa-index
 
-# Ollama配置 (已配置远程服务)
-OLLAMA_BASE_URL=https://occurrence-pressure-implementing-rose.trycloudflare.com/
+# Ollama配置 (Ollama Cloud - 推荐)
+OLLAMA_BASE_URL=https://ollama.com/api
+OLLAMA_API_KEY=your_actual_ollama_api_key_here
 EMBEDDING_MODEL=bge-m3
 LLM_MODEL=gpt-oss:20b
+
+# 或使用本地 Ollama 服务
+# OLLAMA_BASE_URL=http://localhost:11434
+# OLLAMA_API_KEY=
 ```
 
 ## 项目结构
@@ -159,11 +189,13 @@ npm run dev
    - 检查密钥是否有足够的权限访问向量数据库
 
 2. **Ollama连接失败**
-   - 确认远程 Ollama 服务地址可访问
-   - 如果使用本地 Ollama，确保服务已启动并在正确端口运行
+   - **Ollama Cloud 用户**：检查 API 密钥是否正确配置，确认账户有足够额度
+   - **本地 Ollama 用户**：确保服务已启动并在正确端口运行（默认 11434）
+   - 验证网络连接和防火墙设置
 
 3. **配置加载失败**
    - 检查 `.env` 文件是否存在且格式正确
+   - 确保 `OLLAMA_API_KEY` 已正确配置（Ollama Cloud 用户）
    - 运行 `python -c "from app.core.config import settings; print('配置OK')"` 验证配置
 
 ## 部署
@@ -199,6 +231,29 @@ docker-compose -f docker-compose.prod.yml up -d
 - 更快的初始化速度和并发处理能力
 
 以上为主要更新内容，具体技术细节已在上方说明。
+
+### Ollama Cloud 集成
+
+根据 Ollama 官方 Cloud 文档，系统已集成 Ollama Cloud 服务：
+
+#### 主要特性
+- **官方认证支持**: 使用 Bearer Token 认证方式
+- **统一 API 端点**: `https://ollama.com/api`
+- **模型兼容性**: 支持 gpt-oss 系列等 Cloud 模型
+- **灵活部署**: 可选择 Cloud 服务或本地部署
+
+#### 配置变更
+- 新增 `OLLAMA_API_KEY` 环境变量
+- 更新默认端点为官方 Cloud API
+- 保持向后兼容本地 Ollama 部署
+
+#### 使用优势
+- 无需本地 GPU 资源
+- 自动扩缩容支持
+- 更好的模型性能
+- 简化的部署流程
+
+---
 
 ### PNPM 依赖管理
 

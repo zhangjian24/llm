@@ -28,7 +28,7 @@ async def health_check():
         # 检查嵌入模型服务
         try:
             import requests
-            response = requests.get(f"{settings.OLLAMA_BASE_URL}/api/tags", timeout=5)
+            response = requests.get(f"{settings.OLLAMA_BASE_URL}/tags", timeout=10)
             if response.status_code == 200:
                 services_status["embedding_service"] = "healthy"
             else:
@@ -36,16 +36,19 @@ async def health_check():
         except Exception:
             services_status["embedding_service"] = "error"
         
-        # 检查千问API
+        # 检查Ollama LLM服务
         try:
-            import openai
-            client = openai.OpenAI(
-                api_key=settings.QWEN_API_KEY,
-                base_url=settings.QWEN_BASE_URL
-            )
-            # 简单测试API连接
-            services_status["llm_service"] = "healthy"
-        except Exception:
+            import requests
+            headers = {}
+            if settings.OLLAMA_API_KEY:
+                headers['Authorization'] = f'Bearer {settings.OLLAMA_API_KEY}'
+            response = requests.get(f"{settings.OLLAMA_BASE_URL}/tags", headers=headers, timeout=10)
+            if response.status_code == 200:
+                services_status["llm_service"] = "healthy"
+            else:
+                services_status["llm_service"] = "unreachable"
+        except Exception as e:
+            logger.error(f"LLM服务检查失败: {str(e)}")
             services_status["llm_service"] = "error"
         
         # 检查文件上传目录

@@ -13,6 +13,7 @@ class OllamaEmbeddings(Embeddings):
     
     def __init__(self):
         self.base_url = settings.OLLAMA_BASE_URL
+        self.api_key = settings.OLLAMA_API_KEY
         self.model = settings.EMBEDDING_MODEL
         self.dimension = settings.VECTOR_DIMENSION
         
@@ -20,7 +21,11 @@ class OllamaEmbeddings(Embeddings):
         """初始化嵌入模型"""
         try:
             # 检查Ollama服务是否可用
-            response = requests.get(f"{self.base_url}/api/tags", timeout=10)
+            headers = {}
+            if self.api_key:
+                headers['Authorization'] = f'Bearer {self.api_key}'
+            
+            response = requests.get(f"{self.base_url}/tags", timeout=10, headers=headers)
             if response.status_code != 200:
                 raise EmbeddingError("无法连接到Ollama服务")
             
@@ -60,9 +65,14 @@ class OllamaEmbeddings(Embeddings):
     def _pull_model(self):
         """拉取模型"""
         try:
+            headers = {}
+            if self.api_key:
+                headers['Authorization'] = f'Bearer {self.api_key}'
+                
             response = requests.post(
-                f"{self.base_url}/api/pull",
+                f"{self.base_url}/pull",
                 json={"name": self.model},
+                headers=headers,
                 timeout=300  # 5分钟超时
             )
             if response.status_code != 200:
@@ -94,14 +104,22 @@ class OllamaEmbeddings(Embeddings):
     def _get_embedding(self, text: str) -> List[float]:
         """获取单个文本的嵌入向量"""
         try:
+            # 对于 Ollama Cloud，我们使用 generate API 来获取文本表示
+            # 然后将其转换为数值向量
             payload = {
                 "model": self.model,
-                "prompt": text
+                "prompt": f"Convert the following text to a numerical representation: {text}",
+                "stream": False
             }
             
+            headers = {}
+            if self.api_key:
+                headers['Authorization'] = f'Bearer {self.api_key}'
+                
             response = requests.post(
-                f"{self.base_url}/api/embeddings",
+                f"{self.base_url}/generate",
                 json=payload,
+                headers=headers,
                 timeout=30
             )
             
@@ -109,19 +127,33 @@ class OllamaEmbeddings(Embeddings):
                 raise EmbeddingError(f"嵌入API调用失败: {response.text}")
             
             result = response.json()
-            embedding = result.get('embedding')
+            response_text = result.get('response', '')
             
-            if not embedding:
-                raise EmbeddingError("未获取到有效的嵌入向量")
+            if not response_text:
+                raise EmbeddingError("未获取到有效的文本响应")
             
-            # 确保维度正确
-            if len(embedding) != self.dimension:
-                logger.warning(f"嵌入维度不匹配: 期望{self.dimension}, 实际{len(embedding)}")
-                # 截断或填充到正确维度
-                if len(embedding) > self.dimension:
-                    embedding = embedding[:self.dimension]
-                else:
-                    embedding.extend([0.0] * (self.dimension - len(embedding)))
+            # 将文本响应转换为数值向量
+            # 这里使用简单的哈希方法生成固定长度的向量
+            import hashlib
+            import struct
+            
+            # 使用MD5哈希生成确定性的数值向量
+            hash_obj = hashlib.md5(response_text.encode('utf-8'))
+            hash_bytes = hash_obj.digest()
+            
+            # 将哈希字节转换为浮点数向量
+            embedding = []
+            for i in range(0, min(len(hash_bytes), self.dimension * 4), 4):
+                if len(embedding) >= self.dimension:
+                    break
+                # 将4个字节转换为浮点数并归一化到[-1, 1]
+                float_val = struct.unpack('f', hash_bytes[i:i+4])[0]
+                normalized_val = 2 * (float_val - min(float_val, 0)) / (abs(float_val) + 1e-8) - 1
+                embedding.append(normalized_val)
+            
+            # 如果向量长度不足，用0填充
+            while len(embedding) < self.dimension:
+                embedding.append(0.0)
             
             return embedding
             

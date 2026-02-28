@@ -16,6 +16,7 @@ class QAManager:
     
     def __init__(self):
         self.ollama_base_url = settings.OLLAMA_BASE_URL
+        self.ollama_api_key = settings.OLLAMA_API_KEY
         self.llm_model = settings.LLM_MODEL
         
         # 初始化LangChain组件
@@ -28,7 +29,8 @@ class QAManager:
             self.llm = OllamaLLM(
                 model=self.llm_model,
                 base_url=self.ollama_base_url,
-                temperature=0.7
+                temperature=0.7,
+                headers={'Authorization': f'Bearer {self.ollama_api_key}'} if self.ollama_api_key else {}
             )
             
             # 定义Prompt模板

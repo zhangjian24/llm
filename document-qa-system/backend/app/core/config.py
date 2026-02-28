@@ -8,7 +8,8 @@ class Settings(BaseSettings):
     PINECONE_INDEX_NAME: str = "document-qa-index"
     
     # Ollama Configuration
-    OLLAMA_BASE_URL: str = "https://occurrence-pressure-implementing-rose.trycloudflare.com/"
+    OLLAMA_BASE_URL: str = "https://ollama.com/api"
+    OLLAMA_API_KEY: str = ""
     EMBEDDING_MODEL: str = "bge-m3"
     LLM_MODEL: str = "gpt-oss:20b"
     

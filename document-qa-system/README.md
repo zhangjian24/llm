@@ -1,73 +1,81 @@
 # 文档问答系统 (Document QA System)
 
-基于向量检索和上下文注入的智能文档问答系统。
+基于阿里巴巴云通义千问系列模型(text-embedding-v4、rerank-v3、qwen-max)和Pinecone向量数据库的智能文档问答系统。
 
 ## 核心特性
 
 - 📄 多格式文档支持 (PDF, TXT, DOCX, HTML)
-- 🧠 向量检索 (BGE嵌入模型 + Pinecone向量数据库)
-- 💬 智能问答 (Ollama gpt-oss:20b大语言模型)
+- 🧠 向量检索 (text-embedding-v4嵌入模型 + Pinecone v5.3.0向量数据库)
+- 💬 智能问答 (通义千问qwen-max大语言模型)
+- 🔍 结果重排序 (rerank-v3相关性排序)
 - 🔧 模块化架构 (LangChain框架)
-- ⚡ FastAPI后端 + React前端
+- ⚡ FastAPI后端 + React 18.3.1前端
 - 🐳 Docker容器化部署
+- 🔐 Bearer Token标准认证
+- 📊 实时进度显示和系统监控
 
 ## 技术栈
 
 ### 后端
-- **框架**: FastAPI
-- **向量处理**: LangChain
-- **向量数据库**: Pinecone
-- **嵌入模型**: BGE (基于Ollama)
-- **大语言模型**: Ollama gpt-oss:20b
+- **框架**: FastAPI 0.104.1
+- **向量处理**: LangChain 0.1.0
+- **向量数据库**: Pinecone 5.3.0
+- **嵌入模型**: Alibaba Cloud text-embedding-v4
+- **重排序模型**: Alibaba Cloud rerank-v3
+- **大语言模型**: Alibaba Cloud qwen-max
+- **认证**: Bearer Token标准认证
 
 ### 前端
-- **框架**: React 18
-- **样式**: TailwindCSS
-- **构建工具**: Vite
+- **框架**: React 18.3.1
+- **样式**: TailwindCSS 3.4.19
+- **构建工具**: Vite 5.4.21
+- **包管理**: pnpm (推荐)
 
 ## 快速开始
 
 ### 环境要求
 - Python 3.9+
-- Node.js 16+
+- Node.js 18+
 - pnpm (推荐) 或 npm
 - Docker (可选)
-- Ollama Cloud 账户（推荐）或本地 Ollama 服务
+- 阿里巴巴云账户（推荐）
 
-> **推荐使用 Ollama Cloud**：提供更好的性能和稳定性，支持更大的模型
+> **推荐使用阿里巴巴云通义千问服务**：提供企业级的模型服务，更好的性能和稳定性
 
-### Ollama Cloud 配置（推荐）
+### 阿里巴巴云通义千问配置（推荐）
 
-1. **注册 Ollama Cloud 账户**：访问 [ollama.com](https://ollama.com) 注册账户
-2. **创建 API 密钥**：在 [设置页面](https://ollama.com/settings/keys) 创建 API 密钥
-3. **配置环境变量**：
+1. **注册阿里巴巴云账户**：访问 [阿里云官网](https://www.aliyun.com/) 注册账户
+2. **开通DashScope服务**：在[DashScope控制台](https://dashscope.console.aliyun.com/)开通服务
+3. **创建API密钥**：在控制台创建API密钥
+4. **配置环境变量**：
    ```bash
    # 在 .env.local 文件中配置
-   OLLAMA_API_KEY=your_actual_ollama_api_key_here
-   OLLAMA_BASE_URL=https://ollama.com/api
+   QWEN_API_KEY=your_actual_alibaba_cloud_api_key_here
+   QWEN_EMBEDDING_MODEL=text-embedding-v4
+   QWEN_RERANK_MODEL=rerank-v3
+   QWEN_LLM_MODEL=qwen-max
    ```
 
-### 本地 Ollama 服务（推荐用于嵌入功能）
-由于 Ollama Cloud 主要提供大型语言模型，建议使用本地 Ollama 服务来获得更好的嵌入模型支持：
+### 降级配置（无API密钥时）
+系统支持降级运行模式，当未配置阿里巴巴云API密钥时，将使用本地Ollama服务作为后备：
 ```bash
-# 下载专用嵌入模型
+# 下载Ollama服务
+# 访问 https://ollama.com 下载并安装
+
+# 下载模型
 ollama pull bge-m3
 ollama pull nomic-embed-text
-
-# 下载语言模型
 ollama pull gpt-oss:20b
 
 # 启动本地服务
 ollama serve
 
-# 更新配置使用本地服务
-# OLLAMA_BASE_URL=http://localhost:11434
-# EMBEDDING_MODEL=bge-m3
+# 系统将自动检测并使用本地服务
 ```
 
 ### 启动方式
 
-> **重要提醒**: 首次启动前请确保已配置有效的 Pinecone API 密钥和 Ollama Cloud API 密钥
+> **重要提醒**: 首次启动前请确保已配置有效的 Pinecone API 密钥和阿里巴巴云API密钥（或启用降级模式）
 
 #### 方式一：一键启动脚本
 ```bash
@@ -108,19 +116,21 @@ docker-compose up --build
 > **注意**: 系统已简化配置结构，移除了未使用的配置项，当前只需配置核心必需项。
 
 ```bash
-# Pinecone配置 (需要有效的API密钥)
+# Pinecone配置 (v5.3.0 - 必需)
 PINECONE_API_KEY=your_actual_pinecone_api_key_here
 PINECONE_INDEX_NAME=document-qa-index
 
-# Ollama配置 (Ollama Cloud - 推荐)
-OLLAMA_BASE_URL=https://ollama.com/api
-OLLAMA_API_KEY=your_actual_ollama_api_key_here
-EMBEDDING_MODEL=bge-m3
-LLM_MODEL=gpt-oss:20b
+# 阿里巴巴云通义千问配置 (推荐)
+QWEN_API_KEY=your_actual_alibaba_cloud_api_key_here
+QWEN_EMBEDDING_MODEL=text-embedding-v4
+QWEN_RERANK_MODEL=rerank-v3
+QWEN_LLM_MODEL=qwen-max
 
-# 或使用本地 Ollama 服务
+# 降级配置 (无API密钥时使用)
 # OLLAMA_BASE_URL=http://localhost:11434
 # OLLAMA_API_KEY=
+# EMBEDDING_MODEL=bge-m3
+# LLM_MODEL=gpt-oss:20b
 ```
 
 ## 项目结构
@@ -149,11 +159,23 @@ document-qa-system/
 
 启动后访问: http://localhost:8000/docs
 
-主要接口：
+### 核心接口：
 - `POST /api/documents/upload` - 上传文档
 - `POST /api/chat/query` - 问答查询
 - `GET /api/documents/list` - 文档列表
 - `DELETE /api/documents/{doc_id}` - 删除文档
+
+### 新增标准化接口：
+- `POST /api/embeddings` - 文本嵌入生成 (OpenAI兼容)
+- `POST /api/rerank` - 文档相关性重排序
+- `GET /api/embeddings/models` - 嵌入模型列表
+- `GET /api/rerank/models` - 重排序模型列表
+
+### 认证方式：
+所有API接口均支持Bearer Token认证：
+```bash
+Authorization: Bearer YOUR_API_KEY
+```
 
 ## 开发指南
 
@@ -188,15 +210,15 @@ npm run dev
    - 确保在 `.env` 文件中配置了有效的 Pinecone API 密钥
    - 检查密钥是否有足够的权限访问向量数据库
 
-2. **Ollama连接失败**
-   - **Ollama Cloud 用户**：检查 API 密钥是否正确配置，确认账户有足够额度
-   - **本地 Ollama 用户**：确保服务已启动并在正确端口运行（默认 11434）
-   - 验证网络连接和防火墙设置
+2. **阿里巴巴云API密钥错误**
+   - 检查 `QWEN_API_KEY` 是否正确配置
+   - 确认DashScope服务已开通且有足够额度
+   - 系统将自动降级到本地Ollama服务
 
 3. **配置加载失败**
    - 检查 `.env` 文件是否存在且格式正确
-   - 确保 `OLLAMA_API_KEY` 已正确配置（Ollama Cloud 用户）
    - 运行 `python -c "from app.core.config import settings; print('配置OK')"` 验证配置
+   - 系统支持无API密钥的降级运行模式
 
 ## 部署
 
@@ -215,69 +237,75 @@ docker-compose -f docker-compose.prod.yml up -d
 
 ## 技术更新记录
 
-### Pinecone SDK 更新 (v5.3.0)
+### 技术架构升级
 
-根据 Pinecone 官方最新 Python SDK 文档，系统已完成重要更新：
+#### 后端重大升级
+- **模型服务迁移**: 从Ollama迁移到阿里巴巴云通义千问系列模型
+- **向量数据库**: 升级到Pinecone v5.3.0，支持Serverless索引
+- **API标准化**: 实现OpenAI兼容的RESTful API接口
+- **认证机制**: 添加Bearer Token标准认证支持
 
-#### 主要变更
-- **依赖包更新**: `pinecone-client==3.0.0` → `pinecone==5.3.0`
-- **初始化方式**: 采用面向对象的 `Pinecone()` 初始化
-- **索引管理**: 使用 `ServerlessSpec` 配置，支持自动扩缩容
-- **配置简化**: 移除了不再需要的 `PINECONE_ENVIRONMENT` 参数
-
-#### 新增优势
-- Serverless 索引支持（按使用付费）
-- 改进的 API 设计和错误处理
-- 更快的初始化速度和并发处理能力
+#### 前端现代化升级
+- **框架版本**: React 18.2.0 → 18.3.1
+- **样式框架**: TailwindCSS 3.3.6 → 3.4.19
+- **构建工具**: Vite 5.0.8 → 5.4.21
+- **用户体验**: 添加实时进度显示和系统状态监控
 
 以上为主要更新内容，具体技术细节已在上方说明。
 
-### Ollama Cloud 集成
+### 阿里巴巴云通义千问集成
 
-根据 Ollama 官方 Cloud 文档，系统已集成 Ollama Cloud 服务：
+系统现已全面集成阿里巴巴云通义千问系列模型服务：
 
-#### 主要特性
-- **官方认证支持**: 使用 Bearer Token 认证方式
-- **统一 API 端点**: `https://ollama.com/api`
-- **模型兼容性**: 支持 gpt-oss 系列等 Cloud 模型
-- **灵活部署**: 可选择 Cloud 服务或本地部署
+#### 核心模型组件
+- **text-embedding-v4**: 768维文本嵌入模型
+- **rerank-v3**: 文档相关性重排序模型
+- **qwen-max**: 企业级大语言模型
 
-#### 配置变更
-- 新增 `OLLAMA_API_KEY` 环境变量
-- 更新默认端点为官方 Cloud API
-- 保持向后兼容本地 Ollama 部署
-
-#### 使用优势
-- 无需本地 GPU 资源
-- 自动扩缩容支持
-- 更好的模型性能
-- 简化的部署流程
+#### 技术优势
+- **企业级稳定性**: 阿里巴巴云提供的高可用服务
+- **标准化API**: OpenAI兼容的RESTful接口设计
+- **智能降级**: 无API密钥时自动切换到本地Ollama服务
+- **按需付费**: 灵活的计费模式，成本可控
 
 ---
 
-### PNPM 依赖管理
+### 系统测试验证
 
-前端项目已迁移到 PNPM 包管理器，带来显著性能提升：
+项目包含完整的自动化测试套件：
 
-#### 性能优势
-- 🚀 安装速度提升 30-50%
-- 💾 磁盘空间节省约 60%
-- 🔒 更严格的依赖管理和安全性
+#### 测试覆盖范围
+- ✅ 健康检查接口
+- ✅ 嵌入API接口
+- ✅ 重排序API接口
+- ✅ 文档管理接口
+- ✅ 聊天问答接口
 
-#### 使用方式
+#### 运行测试
 ```bash
-# 推荐使用 PNPM
-cd frontend
-pnpm install
-pnpm run dev
+# 运行系统集成测试
+python system_test.py
 
-# 或继续使用 npm
-cd frontend
-npm install
-npm run dev
+# 查看详细测试结果
+cat test_results.json
 ```
 
-以上为使用说明，更多 PNPM 相关命令请参考官方文档。
+#### 测试结果示例
+```json
+{
+  "overall_status": "SUCCESS",
+  "statistics": {
+    "total_tests": 5,
+    "passed_tests": 4,
+    "success_rate": 80.0,
+    "total_time": 10.06
+  }
+}
+```
+
+---
+
+以上为完整的使用说明和技术文档。
 
 ## 许可证
 

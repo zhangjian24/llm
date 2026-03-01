@@ -1,82 +1,150 @@
 import requests
-import os
 import json
-import struct
-import hashlib
 from typing import List, Optional
 from app.core.config import settings
 from app.core.logging_config import logger
 from app.core.exceptions import EmbeddingError
 
-# 导入 Ollama 官方 SDK
-import ollama
-
-class OllamaEmbeddings:
-    """基于Ollama的BGE嵌入模型"""
+class QwenEmbeddings:
+    """基于阿里巴巴云text-embedding-v4的嵌入服务"""
     
     def __init__(self):
-        self.model = settings.EMBEDDING_MODEL
+        self.api_key = settings.QWEN_API_KEY
+        self.model = settings.QWEN_EMBEDDING_MODEL
         self.dimension = settings.VECTOR_DIMENSION
+        self.base_url = "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-embedding"
         
-        # 确保 URL 格式正确（不以 /api 结尾）
-        base_url = settings.OLLAMA_BASE_URL.rstrip('/')
-        if base_url.endswith('/api'):
-            base_url = base_url[:-4]  # 移除末尾的 /api
-            
-        # 创建 Ollama 客户端
-        if settings.OLLAMA_API_KEY:
-            self.client = ollama.Client(
-                host=base_url,
-                headers={'Authorization': f'Bearer {settings.OLLAMA_API_KEY}'}
-            )
-        else:
-            self.client = ollama.Client(host=base_url)
+        # 请求头配置
+        self.headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        }
+        
+        # 兼容旧版配置的降级机制
+        self.use_legacy = not bool(self.api_key)
+        self.legacy_client = None
+        if self.use_legacy:
+            logger.warning("未配置QWEN_API_KEY，将使用Ollama作为后备方案")
+            self._init_legacy_client()
+    
+    def _init_legacy_client(self):
+        """初始化旧版Ollama客户端（降级方案）"""
+        try:
+            import ollama
+            # 确保 URL 格式正确
+            base_url = settings.OLLAMA_BASE_URL.rstrip('/')
+            if base_url.endswith('/api'):
+                base_url = base_url[:-4]
+                
+            # 创建 Ollama 客户端
+            if settings.OLLAMA_API_KEY:
+                self.legacy_client = ollama.Client(
+                    host=base_url,
+                    headers={'Authorization': f'Bearer {settings.OLLAMA_API_KEY}'}
+                )
+            else:
+                self.legacy_client = ollama.Client(host=base_url)
+        except ImportError:
+            logger.error("无法导入ollama模块，后备方案不可用")
+            self.legacy_client = None
     
     async def initialize(self):
-        """初始化嵌入模型"""
+        """初始化嵌入服务"""
         try:
-            # 检查Ollama服务是否可用
-            logger.info(f"正在连接到 Ollama 服务: {self.client._client._base_url}")
-            models_info = self.client.list()
-            logger.info(f"Ollama服务返回的可用模型列表: {models_info}")
+            if not self.use_legacy:
+                # 验证Qwen API密钥有效性
+                test_payload = {
+                    "model": self.model,
+                    "input": {
+                        "texts": ["测试文本"]
+                    }
+                }
+                
+                response = requests.post(
+                    self.base_url,
+                    headers=self.headers,
+                    json=test_payload,
+                    timeout=10
+                )
+                
+                if response.status_code == 200:
+                    logger.info(f"Qwen嵌入服务初始化成功: {self.model}")
+                else:
+                    logger.warning(f"Qwen嵌入服务验证失败: {response.status_code}")
+                    self.use_legacy = True
             
-            # 正确访问模型列表 - 使用对象属性而不是字典键
-            models = models_info.models if hasattr(models_info, 'models') else []
-            model_names = [model.model for model in models]  # 使用 .model 属性
-            
-            logger.info(f"提取的模型名称列表: {model_names}")
-            
-            # 检查模型是否存在
-            model_found = False
-            for model_obj in models:
-                model_name = model_obj.model  # 使用 .model 属性
-                # 精确匹配或基础名称匹配
-                base_name = model_name.split(':')[0]
-                if base_name == self.model or model_name == self.model:
-                    model_found = True
-                    logger.info(f"找到模型: {model_name}")
-                    break
-            
-            if not model_found:
-                logger.warning(f"模型 {self.model} 未找到，尝试拉取...")
-                try:
-                    # 拉取模型
-                    self.client.pull(self.model)
-                    logger.info(f"模型 {self.model} 拉取成功")
-                except Exception as e:
-                    raise EmbeddingError(f"模型拉取失败: {str(e)}")
-            
-            logger.info("BGE嵌入模型初始化成功")
+            if self.use_legacy:
+                if self.legacy_client:
+                    # 初始化Ollama后备服务
+                    logger.info(f"正在连接到 Ollama 服务: {settings.OLLAMA_BASE_URL}")
+                    models_info = self.legacy_client.list()
+                    models = models_info.models if hasattr(models_info, 'models') else []
+                    logger.info(f"Ollama可用模型数量: {len(models)}")
+                    logger.info("使用Ollama作为嵌入服务后备方案")
+                else:
+                    logger.warning("未配置有效的嵌入服务，系统将以受限模式运行")
             
         except Exception as e:
-            logger.error(f"嵌入模型初始化失败: {str(e)}")
-            raise EmbeddingError(f"嵌入模型初始化失败: {str(e)}")
+            logger.error(f"嵌入服务初始化失败: {str(e)}")
+            raise EmbeddingError(f"嵌入服务初始化失败: {str(e)}")
     
     def _get_embedding(self, text: str) -> List[float]:
         """获取单个文本的嵌入向量"""
         try:
+            if not self.use_legacy:
+                # 使用阿里巴巴云API
+                payload = {
+                    "model": self.model,
+                    "input": {
+                        "texts": [text]
+                    }
+                }
+                
+                response = requests.post(
+                    self.base_url,
+                    headers=self.headers,
+                    json=payload,
+                    timeout=30
+                )
+                
+                if response.status_code != 200:
+                    logger.error(f"Qwen嵌入API调用失败: {response.status_code} - {response.text}")
+                    if self.legacy_client:
+                        return self._get_legacy_embedding(text)
+                    else:
+                        raise EmbeddingError(f"API调用失败: {response.status_code}")
+                
+                result = response.json()
+                
+                # 解析嵌入向量
+                if 'output' in result and 'embeddings' in result['output']:
+                    embedding = result['output']['embeddings'][0]['embedding']
+                    # 确保维度正确
+                    if len(embedding) != self.dimension:
+                        logger.warning(f"嵌入维度不匹配: 期望{self.dimension}, 实际{len(embedding)}")
+                        if len(embedding) > self.dimension:
+                            embedding = embedding[:self.dimension]
+                        else:
+                            embedding.extend([0.0] * (self.dimension - len(embedding)))
+                    return embedding
+                else:
+                    raise EmbeddingError("API返回格式不正确")
+            else:
+                return self._get_legacy_embedding(text)
+                
+        except Exception as e:
+            logger.error(f"嵌入生成失败: {str(e)}")
+            raise EmbeddingError(f"嵌入生成失败: {str(e)}")
+    
+    def _get_legacy_embedding(self, text: str) -> List[float]:
+        """使用旧版Ollama获取嵌入向量"""
+        try:
+            if not self.legacy_client:
+                raise EmbeddingError("后备Ollama客户端未初始化")
+            
             # 使用 Ollama SDK 的 embeddings 方法
-            response = self.client.embeddings(model=self.model, prompt=text)
+            response = self.legacy_client.embeddings(model=settings.EMBEDDING_MODEL, prompt=text)
             
             embedding = response.embedding if hasattr(response, 'embedding') else response.get('embedding')
             if not embedding:
@@ -85,7 +153,6 @@ class OllamaEmbeddings:
             # 确保维度正确
             if len(embedding) != self.dimension:
                 logger.warning(f"嵌入维度不匹配: 期望{self.dimension}, 实际{len(embedding)}")
-                # 截断或填充到正确维度
                 if len(embedding) > self.dimension:
                     embedding = embedding[:self.dimension]
                 else:
@@ -94,11 +161,11 @@ class OllamaEmbeddings:
             return embedding
             
         except Exception as e:
-            logger.error(f"嵌入生成失败: {str(e)}")
-            raise EmbeddingError(f"嵌入生成失败: {str(e)}")
+            logger.error(f"旧版嵌入生成失败: {str(e)}")
+            raise EmbeddingError(f"旧版嵌入生成失败: {str(e)}")
     
-    def embed_documents(self, texts: List[str]) -> List[List[float]]:
-        """批量嵌入文档"""
+    async def batch_embed_documents(self, texts: List[str]) -> List[List[float]]:
+        """批量嵌入文档（异步版本）"""
         try:
             embeddings = []
             for text in texts:
@@ -108,6 +175,14 @@ class OllamaEmbeddings:
         except Exception as e:
             logger.error(f"批量嵌入失败: {str(e)}")
             raise EmbeddingError(f"批量嵌入失败: {str(e)}")
+    
+    def embed_documents(self, texts: List[str]) -> List[List[float]]:
+        """批量嵌入文档（同步版本，向后兼容）"""
+        return self.batch_embed_documents(texts)
+    
+    def embed_query(self, query: str) -> List[float]:
+        """为查询生成嵌入向量"""
+        return self._get_embedding(query)
 
 # 创建全局实例
-embedding_service = OllamaEmbeddings()
+embedding_service = QwenEmbeddings()

@@ -1,7 +1,15 @@
 import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { FiUpload, FiFile, FiCheckCircle, FiAlertCircle, FiTrash2 } from 'react-icons/fi';
-import { documentApi, DocumentUploadResponse } from '../services/api';
+import { FiUpload, FiFile, FiCheckCircle, FiAlertCircle, FiTrash2, FiLoader } from 'react-icons/fi';
+import { documentApi } from '../services/api';
+import { DocumentUploadResponse } from '../types';
+
+interface UploadProgress {
+  fileName: string;
+  progress: number;
+  status: 'pending' | 'uploading' | 'processing' | 'completed' | 'failed';
+  documentId?: string;
+}
 
 interface DocumentUploadProps {
   onUploadSuccess?: () => void;
@@ -10,16 +18,63 @@ interface DocumentUploadProps {
 const DocumentUpload: React.FC<DocumentUploadProps> = ({ onUploadSuccess }) => {
   const [uploading, setUploading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<DocumentUploadResponse[]>([]);
+  const [uploadProgress, setUploadProgress] = useState<UploadProgress[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     setUploading(true);
     setError(null);
     
+    // 初始化进度状态
+    const initialProgress: UploadProgress[] = acceptedFiles.map(file => ({
+      fileName: file.name,
+      progress: 0,
+      status: 'pending'
+    }));
+    setUploadProgress(initialProgress);
+    
     try {
       const results = await Promise.all(
-        acceptedFiles.map(async (file) => {
+        acceptedFiles.map(async (file, index) => {
+          // 更新状态为上传中
+          setUploadProgress(prev => {
+            const newProgress = [...prev];
+            newProgress[index] = {
+              ...newProgress[index],
+              status: 'uploading',
+              progress: 30
+            };
+            return newProgress;
+          });
+          
           const result = await documentApi.uploadDocument(file);
+          
+          // 更新状态为处理中
+          setUploadProgress(prev => {
+            const newProgress = [...prev];
+            newProgress[index] = {
+              ...newProgress[index],
+              status: 'processing',
+              progress: 70
+            };
+            return newProgress;
+          });
+          
+          // 模拟处理时间
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // 更新状态为完成
+          setUploadProgress(prev => {
+            const newProgress = [...prev];
+            newProgress[index] = {
+              ...newProgress[index],
+              status: 'completed',
+              progress: 100,
+              documentId: result.document_id
+            };
+            return newProgress;
+          });
+          
           return result;
         })
       );
@@ -28,8 +83,23 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onUploadSuccess }) => {
       if (onUploadSuccess) {
         onUploadSuccess();
       }
+      
+      // 3秒后清除进度显示
+      setTimeout(() => {
+        setUploadProgress([]);
+      }, 3000);
+      
     } catch (err: any) {
       setError(err.response?.data?.detail || '上传失败，请重试');
+      // 更新所有进行中的文件状态为失败
+      setUploadProgress(prev => 
+        prev.map(progress => ({
+          ...progress,
+          status: progress.status === 'uploading' || progress.status === 'processing' 
+            ? 'failed' 
+            : progress.status
+        }))
+      );
     } finally {
       setUploading(false);
     }
@@ -93,9 +163,72 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onUploadSuccess }) => {
           </>
         )}
         {uploading && (
-          <div className="mt-4">
+          <div className="mt-4 space-y-3">
             <div className="loading-spinner mx-auto"></div>
             <p className="text-gray-600 mt-2">正在上传和处理文档...</p>
+            
+            {/* 进度显示 */}
+            {uploadProgress.length > 0 && (
+              <div className="space-y-2 max-w-md mx-auto">
+                {uploadProgress.map((progress, index) => (
+                  <div key={index} className="bg-white rounded-lg p-3 shadow-sm">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-gray-700 truncate">
+                        {progress.fileName}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {progress.progress}%
+                      </span>
+                    </div>
+                    
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className={`h-2 rounded-full transition-all duration-300 $ {
+                          progress.status === 'completed' ? 'bg-green-500' :
+                          progress.status === 'failed' ? 'bg-red-500' :
+                          progress.status === 'processing' ? 'bg-yellow-500' :
+                          'bg-blue-500'
+                        }`}
+                        style={{ width: `${progress.progress}%` }}
+                      ></div>
+                    </div>
+                    
+                    <div className="flex items-center mt-2 text-xs">
+                      {progress.status === 'pending' && (
+                        <span className="text-gray-500 flex items-center">
+                          <FiLoader className="mr-1" />
+                          等待上传...
+                        </span>
+                      )}
+                      {progress.status === 'uploading' && (
+                        <span className="text-blue-500 flex items-center">
+                          <FiLoader className="mr-1 animate-spin" />
+                          上传中...
+                        </span>
+                      )}
+                      {progress.status === 'processing' && (
+                        <span className="text-yellow-600 flex items-center">
+                          <FiLoader className="mr-1 animate-spin" />
+                          处理中...
+                        </span>
+                      )}
+                      {progress.status === 'completed' && (
+                        <span className="text-green-600 flex items-center">
+                          <FiCheckCircle className="mr-1" />
+                          完成
+                        </span>
+                      )}
+                      {progress.status === 'failed' && (
+                        <span className="text-red-600 flex items-center">
+                          <FiAlertCircle className="mr-1" />
+                          失败
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { FiSend, FiLoader, FiBook, FiRefreshCw } from 'react-icons/fi';
-import { chatApi, QueryRequest, QueryResponse } from '../services/api';
+import { FiSend, FiLoader, FiBook, FiRefreshCw, FiSettings, FiCpu, FiBarChart2 } from 'react-icons/fi';
+import { chatApi } from '../services/api';
+import { QueryRequest, QueryResponse } from '../types';
 
 interface Message {
   id: string;
@@ -11,11 +12,23 @@ interface Message {
   confidence?: number;
 }
 
+interface ModelStatus {
+  name: string;
+  status: 'online' | 'offline' | 'loading';
+  latency?: number;
+}
+
 const ChatInterface: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
+  const [modelStatus, setModelStatus] = useState<ModelStatus>({
+    name: 'qwen-max',
+    status: 'loading',
+    latency: undefined
+  });
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -29,6 +42,8 @@ const ChatInterface: React.FC = () => {
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isLoading) return;
 
+    const startTime = Date.now();
+    
     const userMessage: Message = {
       id: Date.now().toString(),
       type: 'user',
@@ -40,6 +55,12 @@ const ChatInterface: React.FC = () => {
     setInputValue('');
     setIsLoading(true);
     setError(null);
+    
+    // 更新模型状态为处理中
+    setModelStatus(prev => ({
+      ...prev,
+      status: 'loading'
+    }));
 
     try {
       const request: QueryRequest = {
@@ -48,6 +69,9 @@ const ChatInterface: React.FC = () => {
       };
 
       const response: QueryResponse = await chatApi.queryDocuments(request);
+      
+      const endTime = Date.now();
+      const latency = endTime - startTime;
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -59,8 +83,21 @@ const ChatInterface: React.FC = () => {
       };
 
       setMessages(prev => [...prev, assistantMessage]);
+      
+      // 更新模型状态为在线并记录延迟
+      setModelStatus(prev => ({
+        ...prev,
+        status: 'online',
+        latency
+      }));
+      
     } catch (err: any) {
       setError(err.response?.data?.detail || '发送消息失败，请重试');
+      // 更新模型状态为离线
+      setModelStatus(prev => ({
+        ...prev,
+        status: 'offline'
+      }));
     } finally {
       setIsLoading(false);
     }
@@ -92,14 +129,83 @@ const ChatInterface: React.FC = () => {
           <h2 className="text-xl font-bold text-gray-900">智能问答</h2>
           <p className="text-gray-600 text-sm">基于已上传文档进行智能问答</p>
         </div>
-        <button
-          onClick={clearChat}
-          className="btn-secondary flex items-center space-x-2"
-        >
-          <FiRefreshCw className="w-4 h-4" />
-          <span>清空对话</span>
-        </button>
+        <div className="flex items-center space-x-3">
+          {/* 模型状态指示器 */}
+          <div className="flex items-center space-x-2 px-3 py-1 bg-gray-100 rounded-lg">
+            <div className={`w-2 h-2 rounded-full $ {
+              modelStatus.status === 'online' ? 'bg-green-500' :
+              modelStatus.status === 'loading' ? 'bg-yellow-500' :
+              'bg-red-500'
+            }`}></div>
+            <span className="text-xs text-gray-600">
+              {modelStatus.name}
+            </span>
+            {modelStatus.latency && (
+              <span className="text-xs text-gray-500">
+                {modelStatus.latency}ms
+              </span>
+            )}
+          </div>
+          
+          <button
+            onClick={() => setShowSettings(!showSettings)}
+            className="btn-secondary flex items-center space-x-2"
+          >
+            <FiSettings className="w-4 h-4" />
+          </button>
+          
+          <button
+            onClick={clearChat}
+            className="btn-secondary flex items-center space-x-2"
+          >
+            <FiRefreshCw className="w-4 h-4" />
+            <span>清空</span>
+          </button>
+        </div>
       </div>
+      
+      {/* 设置面板 */}
+      {showSettings && (
+        <div className="bg-white border-b border-gray-200 p-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <div className="flex items-center mb-2">
+                <FiCpu className="w-5 h-5 text-blue-600 mr-2" />
+                <h3 className="font-medium text-gray-900">模型配置</h3>
+              </div>
+              <div className="space-y-2 text-sm text-gray-600">
+                <p>当前模型: {modelStatus.name}</p>
+                <p>状态: {modelStatus.status === 'online' ? '在线' : modelStatus.status === 'loading' ? '处理中' : '离线'}</p>
+                {modelStatus.latency && <p>平均延迟: {modelStatus.latency}ms</p>}
+              </div>
+            </div>
+            
+            <div className="bg-green-50 p-4 rounded-lg">
+              <div className="flex items-center mb-2">
+                <FiBarChart2 className="w-5 h-5 text-green-600 mr-2" />
+                <h3 className="font-medium text-gray-900">系统统计</h3>
+              </div>
+              <div className="space-y-2 text-sm text-gray-600">
+                <p>对话轮次: {messages.length / 2}</p>
+                <p>总字符数: {messages.reduce((acc, msg) => acc + msg.content.length, 0)}</p>
+                <p>引用文档: {Array.from(new Set(messages.flatMap(msg => msg.sources?.map(s => s.document_id) || [])).values()).length}</p>
+              </div>
+            </div>
+            
+            <div className="bg-purple-50 p-4 rounded-lg">
+              <div className="flex items-center mb-2">
+                <FiSettings className="w-5 h-5 text-purple-600 mr-2" />
+                <h3 className="font-medium text-gray-900">高级设置</h3>
+              </div>
+              <div className="space-y-2 text-sm text-gray-600">
+                <p>Top-K: 5</p>
+                <p>置信度阈值: 0.7</p>
+                <p>最大上下文: 2048 tokens</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 消息区域 */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">

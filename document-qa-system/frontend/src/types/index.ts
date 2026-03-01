@@ -43,3 +43,54 @@ export interface HealthCheckResponse {
   timestamp: string;
   services: Record<string, string>;
 }
+
+// 嵌入相关类型
+export interface EmbeddingRequest {
+  input: string[];
+  model: string;
+}
+
+export interface TextEmbedding {
+  object: string;
+  embedding: number[];
+  index: number;
+}
+
+export interface EmbeddingResponse {
+  object: string;
+  data: TextEmbedding[];
+  model: string;
+  usage: Record<string, number>;
+}
+
+export interface QueryEmbeddingRequest {
+  query: string;
+}
+
+// 重排序相关类型
+export interface RerankRequest {
+  model: string;
+  query: string;
+  documents: any[];
+  top_n?: number;
+}
+
+export interface RerankResult {
+  index: number;
+  document: string;
+  relevance_score: number;
+  document_id: string;
+}
+
+export interface RerankResponse {
+  id: string;
+  results: RerankResult[];
+  usage: Record<string, number>;
+}
+
+// API密钥配置类型
+export interface ApiConfig {
+  apiKey: string;
+  apiUrl: string;
+  modelName: string;
+}

@@ -9,6 +9,8 @@ from app.core.logging_config import logger
 from app.api.documents import router as documents_router
 from app.api.chat import router as chat_router
 from app.api.health import router as health_router
+from app.api.embeddings import router as embeddings_router
+from app.api.rerank import router as rerank_router
 from app.core.exceptions import handle_exception
 
 @asynccontextmanager
@@ -27,6 +29,11 @@ async def lifespan(app: FastAPI):
         from app.services.embedding import embedding_service
         await embedding_service.initialize()
         logger.info("嵌入模型初始化成功")
+        
+        # 初始化重排序服务
+        from app.services.reranker import reranker_service
+        await reranker_service.initialize()
+        logger.info("重排序服务初始化成功")
         
     except Exception as e:
         logger.error(f"系统初始化失败: {str(e)}")
@@ -64,6 +71,8 @@ app.add_middleware(
 app.include_router(health_router, prefix="/api", tags=["health"])
 app.include_router(documents_router, prefix="/api/documents", tags=["documents"])
 app.include_router(chat_router, prefix="/api/chat", tags=["chat"])
+app.include_router(embeddings_router, prefix="/api", tags=["embeddings"])
+app.include_router(rerank_router, prefix="/api", tags=["rerank"])
 
 # 全局异常处理
 @app.exception_handler(Exception)

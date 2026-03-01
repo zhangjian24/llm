@@ -8,6 +8,7 @@ from app.core.config import settings
 from app.core.logging_config import logger
 from app.core.exceptions import VectorStoreError
 from app.services.embedding import embedding_service
+from app.services.reranker import reranker_service
 
 class PineconeVectorStore:
     """Pinecone向量数据库存储"""
@@ -40,10 +41,17 @@ class PineconeVectorStore:
                         region="us-east-1"
                     )
                 )
-                await asyncio.sleep(5)  # 等待索引创建完成
+                await asyncio.sleep(10)  # 等待索引创建完成
+                logger.info(f"索引 {self.index_name} 创建完成")
+            else:
+                logger.info(f"使用现有索引: {self.index_name}")
             
             # 连接到索引
             self.index = self.pc.Index(self.index_name)
+            
+            # 验证索引状态
+            index_stats = self.index.describe_index_stats()
+            logger.info(f"索引统计信息: {index_stats}")
             logger.info(f"Pinecone向量数据库初始化成功: {self.index_name}")
             
         except Exception as e:
@@ -83,10 +91,14 @@ class PineconeVectorStore:
                     "metadata": chunk_metadata
                 })
             
-            # 批量插入向量
-            if vectors_to_upsert:
-                self.index.upsert(vectors=vectors_to_upsert)
-                logger.info(f"文档chunks存储成功: {document_id}, 数量: {len(vectors_to_upsert)}")
+            # 分批插入向量（Pinecone建议每批不超过100个）
+            batch_size = 100
+            for i in range(0, len(vectors_to_upsert), batch_size):
+                batch = vectors_to_upsert[i:i + batch_size]
+                self.index.upsert(vectors=batch)
+                logger.info(f"批次插入完成: {len(batch)} 个向量")
+            
+            logger.info(f"文档chunks存储成功: {document_id}, 总数: {len(vectors_to_upsert)}")
             
             return chunk_ids
             
@@ -96,7 +108,7 @@ class PineconeVectorStore:
     
     async def search_similar_chunks(self, query: str, top_k: Optional[int] = None,
                                   document_ids: Optional[List[str]] = None) -> List[Dict[str, Any]]:
-        """搜索相似的文档chunks"""
+        """搜索相似的文档chunks并进行重排序"""
         try:
             if not self.index:
                 raise VectorStoreError("向量数据库未初始化")
@@ -109,16 +121,17 @@ class PineconeVectorStore:
             if document_ids:
                 filter_dict["document_id"] = {"$in": document_ids}
             
-            # 执行相似性搜索
+            # 执行相似性搜索（获取更多候选结果用于重排序）
+            candidate_k = (top_k or self.top_k) * 2  # 获取两倍候选结果
             search_results = self.index.query(
                 vector=query_embedding,
-                top_k=top_k or self.top_k,
+                top_k=candidate_k,
                 include_metadata=True,
                 filter=filter_dict if filter_dict else None
             )
             
-            # 处理搜索结果
-            similar_chunks = []
+            # 处理初始搜索结果
+            candidate_chunks = []
             for match in search_results.matches:
                 if match.score >= self.score_threshold:
                     chunk_info = {
@@ -127,12 +140,27 @@ class PineconeVectorStore:
                         "chunk_text": match.metadata.get("chunk_text"),
                         "chunk_index": match.metadata.get("chunk_index"),
                         "score": match.score,
-                        "metadata": match.metadata
+                        "metadata": match.metadata,
+                        "content": match.metadata.get("chunk_text", "")
                     }
-                    similar_chunks.append(chunk_info)
+                    candidate_chunks.append(chunk_info)
             
-            logger.info(f"相似性搜索完成，找到 {len(similar_chunks)} 个相关chunks")
-            return similar_chunks
+            logger.info(f"初始搜索完成，找到 {len(candidate_chunks)} 个候选chunks")
+            
+            # 使用重排序服务优化结果
+            if candidate_chunks and hasattr(reranker_service, 'rerank_documents'):
+                reranked_chunks = reranker_service.rerank_documents(
+                    query=query,
+                    documents=candidate_chunks,
+                    top_k=top_k or self.top_k
+                )
+                logger.info(f"重排序完成，返回 {len(reranked_chunks)} 个最优chunks")
+                return reranked_chunks
+            else:
+                # 如果没有重排序服务，直接返回初始结果
+                final_chunks = candidate_chunks[:top_k or self.top_k]
+                logger.info(f"直接返回前 {len(final_chunks)} 个chunks")
+                return final_chunks
             
         except Exception as e:
             logger.error(f"相似性搜索失败: {str(e)}")
@@ -156,10 +184,15 @@ class PineconeVectorStore:
             # 提取chunk IDs
             chunk_ids = [match.id for match in query_result.matches]
             
-            # 删除chunks
+            # 分批删除chunks（Pinecone建议每批不超过1000个）
             if chunk_ids:
-                self.index.delete(ids=chunk_ids)
-                logger.info(f"文档chunks删除成功: {document_id}, 数量: {len(chunk_ids)}")
+                batch_size = 1000
+                for i in range(0, len(chunk_ids), batch_size):
+                    batch = chunk_ids[i:i + batch_size]
+                    self.index.delete(ids=batch)
+                    logger.info(f"批次删除完成: {len(batch)} 个chunks")
+                
+                logger.info(f"文档chunks删除成功: {document_id}, 总数: {len(chunk_ids)}")
             
             return True
             

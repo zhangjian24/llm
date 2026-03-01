@@ -1,8 +1,8 @@
-import openai
+import requests
+import json
 from typing import List, Dict, Any, Optional
 import asyncio
 from langchain_core.prompts import PromptTemplate
-from langchain_ollama import OllamaLLM
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
 
@@ -12,12 +12,27 @@ from app.core.exceptions import LLMError
 from app.services.vector_store import vector_store
 
 class QAManager:
-    """问答管理器 - 集成Ollama gpt-oss:20b模型和LangChain"""
+    """问答管理器 - 集成阿里巴巴云qwen-max模型和LangChain"""
     
     def __init__(self):
-        self.ollama_base_url = settings.OLLAMA_BASE_URL
-        self.ollama_api_key = settings.OLLAMA_API_KEY
-        self.llm_model = settings.LLM_MODEL
+        self.qwen_api_key = settings.QWEN_API_KEY
+        self.qwen_model = settings.QWEN_LLM_MODEL
+        self.max_tokens = settings.MAX_TOKENS
+        self.temperature = settings.TEMPERATURE
+        self.base_url = "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation"
+        
+        # 请求头配置
+        self.headers = {
+            "Authorization": f"Bearer {self.qwen_api_key}",
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        }
+        
+        # 兼容旧版配置的降级机制
+        self.use_legacy = not bool(self.qwen_api_key)
+        self.legacy_llm = None
+        if self.use_legacy:
+            logger.warning("未配置QWEN_API_KEY，将使用Ollama作为后备方案")
         
         # 初始化LangChain组件
         self._initialize_langchain()
@@ -25,13 +40,24 @@ class QAManager:
     def _initialize_langchain(self):
         """初始化LangChain组件"""
         try:
-            # 初始化Ollama模型
-            self.llm = OllamaLLM(
-                model=self.llm_model,
-                base_url=self.ollama_base_url,
-                temperature=0.7,
-                headers={'Authorization': f'Bearer {self.ollama_api_key}'} if self.ollama_api_key else {}
-            )
+            if self.use_legacy:
+                # 初始化Ollama后备模型
+                try:
+                    from langchain_ollama import OllamaLLM
+                    self.llm = OllamaLLM(
+                        model=settings.LLM_MODEL,
+                        base_url=settings.OLLAMA_BASE_URL,
+                        temperature=self.temperature,
+                        headers={'Authorization': f'Bearer {settings.OLLAMA_API_KEY}'} if settings.OLLAMA_API_KEY else {}
+                    )
+                    logger.info("使用Ollama作为语言模型后备方案")
+                except ImportError:
+                    logger.error("无法导入Ollama模块，后备方案不可用")
+                    self.llm = self._create_dummy_adapter()
+            else:
+                # 使用Qwen API，创建适配器
+                self.llm = self._create_qwen_adapter()
+                logger.info("使用阿里巴巴云qwen-max作为语言模型")
             
             # 定义Prompt模板
             self.prompt_template = PromptTemplate.from_template(
@@ -51,6 +77,28 @@ class QAManager:
         except Exception as e:
             logger.error(f"LangChain初始化失败: {str(e)}")
             raise LLMError(f"LangChain初始化失败: {str(e)}")
+    
+    def _create_qwen_adapter(self):
+        """创建Qwen API适配器"""
+        class QwenAdapter:
+            def __init__(self, manager):
+                self.manager = manager
+            
+            def invoke(self, prompt):
+                return self.manager._call_qwen_api(prompt)
+        
+        return QwenAdapter(self)
+    
+    def _create_dummy_adapter(self):
+        """创建虚拟适配器（用于降级情况）"""
+        class DummyAdapter:
+            def __init__(self, manager):
+                self.manager = manager
+            
+            def invoke(self, prompt):
+                return "抱歉，当前系统未配置有效的语言模型服务。请配置QWEN_API_KEY或确保Ollama服务正常运行。"
+        
+        return DummyAdapter(self)
     
     async def answer_question(self, query: str, document_ids: Optional[List[str]] = None,
                             top_k: int = 5) -> Dict[str, Any]:
@@ -98,6 +146,70 @@ class QAManager:
         except Exception as e:
             logger.error(f"问答处理失败: {str(e)}")
             raise LLMError(f"问答处理失败: {str(e)}")
+    
+    def _call_qwen_api(self, prompt: str) -> str:
+        """调用阿里巴巴云Qwen API"""
+        try:
+            payload = {
+                "model": self.qwen_model,
+                "input": {
+                    "prompt": prompt
+                },
+                "parameters": {
+                    "max_tokens": self.max_tokens,
+                    "temperature": self.temperature,
+                    "top_p": 0.8,
+                    "stop": ["\n\n"]
+                }
+            }
+            
+            response = requests.post(
+                self.base_url,
+                headers=self.headers,
+                json=payload,
+                timeout=60
+            )
+            
+            if response.status_code != 200:
+                logger.error(f"Qwen API调用失败: {response.status_code} - {response.text}")
+                if self.use_legacy and hasattr(self, '_call_legacy_llm'):
+                    return self._call_legacy_llm(prompt)
+                else:
+                    raise LLMError(f"API调用失败: {response.status_code}")
+            
+            result = response.json()
+            
+            # 解析响应
+            if 'output' in result and 'text' in result['output']:
+                return result['output']['text'].strip()
+            else:
+                raise LLMError("API返回格式不正确")
+                
+        except Exception as e:
+            logger.error(f"Qwen API调用异常: {str(e)}")
+            if self.use_legacy:
+                return self._call_legacy_llm(prompt)
+            else:
+                raise LLMError(f"Qwen API调用失败: {str(e)}")
+    
+    def _call_legacy_llm(self, prompt: str) -> str:
+        """调用旧版Ollama模型（降级方案）"""
+        try:
+            if not hasattr(self, 'legacy_llm') or self.legacy_llm is None:
+                # 动态导入并初始化Ollama模型
+                from langchain_ollama import OllamaLLM
+                self.legacy_llm = OllamaLLM(
+                    model=settings.LLM_MODEL,
+                    base_url=settings.OLLAMA_BASE_URL,
+                    temperature=self.temperature,
+                    headers={'Authorization': f'Bearer {settings.OLLAMA_API_KEY}'} if settings.OLLAMA_API_KEY else {}
+                )
+            
+            return self.legacy_llm.invoke(prompt)
+            
+        except Exception as e:
+            logger.error(f"旧版LLM调用失败: {str(e)}")
+            return "抱歉，当前无法处理您的请求。"
     
     def _build_context(self, chunks: List[Dict[str, Any]]) -> str:
         """构建问答上下文"""

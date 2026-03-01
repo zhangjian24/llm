@@ -45,3 +45,45 @@ class HealthCheckResponse(BaseModel):
     status: str = Field(..., description="服务状态")
     timestamp: datetime = Field(..., description="检查时间")
     services: Dict[str, str] = Field(..., description="各服务状态")
+
+class EmbeddingRequest(BaseModel):
+    """嵌入请求"""
+    input: List[str] = Field(..., description="输入文本列表")
+    model: str = Field("text-embedding-v4", description="模型名称")
+
+class TextEmbedding(BaseModel):
+    """单个文本嵌入"""
+    object: str = Field("embedding", description="对象类型")
+    embedding: List[float] = Field(..., description="嵌入向量")
+    index: int = Field(..., description="索引位置")
+
+class EmbeddingResponse(BaseModel):
+    """嵌入响应"""
+    object: str = Field("list", description="对象类型")
+    data: List[TextEmbedding] = Field(..., description="嵌入数据")
+    model: str = Field(..., description="模型名称")
+    usage: Dict[str, int] = Field(..., description="使用统计")
+
+class QueryEmbeddingRequest(BaseModel):
+    """查询嵌入请求"""
+    query: str = Field(..., description="查询文本", min_length=1)
+
+class RerankRequest(BaseModel):
+    """重排序请求"""
+    model: str = Field("rerank-v3", description="模型名称")
+    query: str = Field(..., description="查询文本", min_length=1)
+    documents: List[Any] = Field(..., description="文档列表")
+    top_n: Optional[int] = Field(10, description="返回top N结果", ge=1, le=100)
+
+class RerankResult(BaseModel):
+    """重排序结果"""
+    index: int = Field(..., description="原始索引")
+    document: str = Field(..., description="文档内容")
+    relevance_score: float = Field(..., description="相关性分数", ge=0, le=1)
+    document_id: str = Field("", description="文档ID")
+
+class RerankResponse(BaseModel):
+    """重排序响应"""
+    id: str = Field(..., description="请求ID")
+    results: List[RerankResult] = Field(..., description="重排序结果")
+    usage: Dict[str, int] = Field(..., description="使用统计")

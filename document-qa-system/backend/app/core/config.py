@@ -7,7 +7,13 @@ class Settings(BaseSettings):
     PINECONE_API_KEY: str
     PINECONE_INDEX_NAME: str = "document-qa-index"
     
-    # Ollama Configuration
+    # Alibaba Cloud Qwen Configuration
+    QWEN_API_KEY: str = ""
+    QWEN_EMBEDDING_MODEL: str = "text-embedding-v4"
+    QWEN_RERANK_MODEL: str = "rerank-v3"
+    QWEN_LLM_MODEL: str = "qwen-max"
+    
+    # Ollama Configuration (Legacy - will be deprecated)
     OLLAMA_BASE_URL: str = "https://ollama.com"
     OLLAMA_API_KEY: str = ""
     EMBEDDING_MODEL: str = "bge-m3"
@@ -41,6 +47,14 @@ class Settings(BaseSettings):
     VECTOR_DIMENSION: int = 768
     TOP_K_RESULTS: int = 5
     SCORE_THRESHOLD: float = 0.7
+    
+    # Reranking Settings
+    RERANK_TOP_K: int = 10
+    RERANK_SCORE_THRESHOLD: float = 0.8
+    
+    # Model Settings
+    MAX_TOKENS: int = 2048
+    TEMPERATURE: float = 0.7
     
     class Config:
         env_file = [".env.local", ".env"]  # 优先加载 .env.local，然后是 .env

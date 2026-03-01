@@ -9,6 +9,13 @@ import {
 
 const API_BASE_URL = '/api';
 
+// 获取API密钥（可以从环境变量或用户设置中获取）
+const getApiKey = (): string => {
+  // 在实际应用中，这里应该从安全的地方获取API密钥
+  // 例如：localStorage、环境变量或用户登录后的token
+  return localStorage.getItem('api_key') || 'YOUR_DEFAULT_API_KEY';
+};
+
 // 创建axios实例
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -21,7 +28,11 @@ const apiClient = axios.create({
 // 请求拦截器
 apiClient.interceptors.request.use(
   (config) => {
-    // 可以在这里添加认证token等
+    // 添加Bearer Token认证
+    const apiKey = getApiKey();
+    if (apiKey && apiKey !== 'YOUR_DEFAULT_API_KEY') {
+      config.headers.Authorization = `Bearer ${apiKey}`;
+    }
     return config;
   },
   (error) => {
@@ -112,6 +123,58 @@ export const healthApi = {
   // 获取系统统计
   getStats: async (): Promise<any> => {
     const response = await apiClient.get('/stats');
+    return response;
+  }
+};
+
+// 嵌入相关API
+export const embeddingApi = {
+  // 创建文本嵌入
+  createEmbeddings: async (texts: string[]): Promise<any> => {
+    const response = await apiClient.post('/embeddings', {
+      input: texts,
+      model: 'text-embedding-v4'
+    });
+    return response;
+  },
+
+  // 为查询创建嵌入
+  createQueryEmbedding: async (query: string): Promise<any> => {
+    const response = await apiClient.post('/embeddings/query', {
+      query
+    });
+    return response;
+  },
+
+  // 获取可用模型列表
+  getModels: async (): Promise<any> => {
+    const response = await apiClient.get('/embeddings/models');
+    return response;
+  }
+};
+
+// 重排序相关API
+export const rerankApi = {
+  // 文档重排序
+  rerankDocuments: async (query: string, documents: any[], topN: number = 10): Promise<any> => {
+    const response = await apiClient.post('/rerank', {
+      model: 'rerank-v3',
+      query,
+      documents,
+      top_n: topN
+    });
+    return response;
+  },
+
+  // 批量重排序
+  batchRerank: async (requests: any[]): Promise<any> => {
+    const response = await apiClient.post('/rerank/batch', requests);
+    return response;
+  },
+
+  // 获取重排序模型列表
+  getModels: async (): Promise<any> => {
+    const response = await apiClient.get('/rerank/models');
     return response;
   }
 };

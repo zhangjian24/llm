@@ -24,6 +24,12 @@ class LLMError(Exception):
         self.message = message
         super().__init__(self.message)
 
+class RerankError(Exception):
+    """重排序模型错误"""
+    def __init__(self, message: str):
+        self.message = message
+        super().__init__(self.message)
+
 def handle_exception(exc: Exception) -> HTTPException:
     """统一异常处理"""
     if isinstance(exc, DocumentProcessingError):
@@ -45,6 +51,11 @@ def handle_exception(exc: Exception) -> HTTPException:
         return HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"语言模型错误: {exc.message}"
+        )
+    elif isinstance(exc, RerankError):
+        return HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"重排序模型错误: {exc.message}"
         )
     else:
         return HTTPException(

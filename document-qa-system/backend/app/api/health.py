@@ -27,26 +27,23 @@ async def health_check():
         
         # 检查嵌入模型服务
         try:
-            import requests
-            response = requests.get(f"{settings.OLLAMA_BASE_URL}/tags", timeout=10)
-            if response.status_code == 200:
+            from app.services.embedding import embedding_service
+            # 检查Qwen嵌入服务状态
+            if hasattr(embedding_service, 'use_legacy') and not embedding_service.use_legacy:
                 services_status["embedding_service"] = "healthy"
             else:
-                services_status["embedding_service"] = "unreachable"
+                services_status["embedding_service"] = "using_legacy"
         except Exception:
             services_status["embedding_service"] = "error"
         
-        # 检查Ollama LLM服务
+        # 检查LLM服务
         try:
-            import requests
-            headers = {}
-            if settings.OLLAMA_API_KEY:
-                headers['Authorization'] = f'Bearer {settings.OLLAMA_API_KEY}'
-            response = requests.get(f"{settings.OLLAMA_BASE_URL}/tags", headers=headers, timeout=10)
-            if response.status_code == 200:
+            from app.services.qa_engine import qa_manager
+            # 检查Qwen LLM服务状态
+            if hasattr(qa_manager, 'use_legacy') and not qa_manager.use_legacy:
                 services_status["llm_service"] = "healthy"
             else:
-                services_status["llm_service"] = "unreachable"
+                services_status["llm_service"] = "using_legacy"
         except Exception as e:
             logger.error(f"LLM服务检查失败: {str(e)}")
             services_status["llm_service"] = "error"

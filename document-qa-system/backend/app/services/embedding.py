@@ -21,33 +21,13 @@ class QwenEmbeddings:
             "Accept": "application/json"
         }
         
-        # 兼容旧版配置的降级机制
-        self.use_legacy = not bool(self.api_key)
-        self.legacy_client = None
-        if self.use_legacy:
-            logger.warning("未配置QWEN_API_KEY，将使用Ollama作为后备方案")
-            self._init_legacy_client()
+        # 系统必须配置QWEN_API_KEY
+        self.use_legacy = False
+        if not self.api_key:
+            logger.error("未配置QWEN_API_KEY，系统无法初始化嵌入服务")
+            raise EmbeddingError("必须配置QWEN_API_KEY才能使用嵌入服务")
     
-    def _init_legacy_client(self):
-        """初始化旧版Ollama客户端（降级方案）"""
-        try:
-            import ollama
-            # 确保 URL 格式正确
-            base_url = settings.OLLAMA_BASE_URL.rstrip('/')
-            if base_url.endswith('/api'):
-                base_url = base_url[:-4]
-                
-            # 创建 Ollama 客户端
-            if settings.OLLAMA_API_KEY:
-                self.legacy_client = ollama.Client(
-                    host=base_url,
-                    headers={'Authorization': f'Bearer {settings.OLLAMA_API_KEY}'}
-                )
-            else:
-                self.legacy_client = ollama.Client(host=base_url)
-        except ImportError:
-            logger.error("无法导入ollama模块，后备方案不可用")
-            self.legacy_client = None
+
     
     async def initialize(self):
         """初始化嵌入服务"""
@@ -74,16 +54,9 @@ class QwenEmbeddings:
                     logger.warning(f"Qwen嵌入服务验证失败: {response.status_code}")
                     self.use_legacy = True
             
-            if self.use_legacy:
-                if self.legacy_client:
-                    # 初始化Ollama后备服务
-                    logger.info(f"正在连接到 Ollama 服务: {settings.OLLAMA_BASE_URL}")
-                    models_info = self.legacy_client.list()
-                    models = models_info.models if hasattr(models_info, 'models') else []
-                    logger.info(f"Ollama可用模型数量: {len(models)}")
-                    logger.info("使用Ollama作为嵌入服务后备方案")
-                else:
-                    logger.warning("未配置有效的嵌入服务，系统将以受限模式运行")
+            # 系统必须配置有效的API密钥
+            if not self.api_key:
+                raise EmbeddingError("未配置有效的嵌入服务，必须配置QWEN_API_KEY")
             
         except Exception as e:
             logger.error(f"嵌入服务初始化失败: {str(e)}")
@@ -110,10 +83,7 @@ class QwenEmbeddings:
                 
                 if response.status_code != 200:
                     logger.error(f"Qwen嵌入API调用失败: {response.status_code} - {response.text}")
-                    if self.legacy_client:
-                        return self._get_legacy_embedding(text)
-                    else:
-                        raise EmbeddingError(f"API调用失败: {response.status_code}")
+                    raise EmbeddingError(f"API调用失败: {response.status_code}")
                 
                 result = response.json()
                 
@@ -130,39 +100,13 @@ class QwenEmbeddings:
                     return embedding
                 else:
                     raise EmbeddingError("API返回格式不正确")
-            else:
-                return self._get_legacy_embedding(text)
+
                 
         except Exception as e:
             logger.error(f"嵌入生成失败: {str(e)}")
             raise EmbeddingError(f"嵌入生成失败: {str(e)}")
     
-    def _get_legacy_embedding(self, text: str) -> List[float]:
-        """使用旧版Ollama获取嵌入向量"""
-        try:
-            if not self.legacy_client:
-                raise EmbeddingError("后备Ollama客户端未初始化")
-            
-            # 使用 Ollama SDK 的 embeddings 方法
-            response = self.legacy_client.embeddings(model=settings.EMBEDDING_MODEL, prompt=text)
-            
-            embedding = response.embedding if hasattr(response, 'embedding') else response.get('embedding')
-            if not embedding:
-                raise EmbeddingError("未获取到有效的嵌入向量")
-            
-            # 确保维度正确
-            if len(embedding) != self.dimension:
-                logger.warning(f"嵌入维度不匹配: 期望{self.dimension}, 实际{len(embedding)}")
-                if len(embedding) > self.dimension:
-                    embedding = embedding[:self.dimension]
-                else:
-                    embedding.extend([0.0] * (self.dimension - len(embedding)))
-            
-            return embedding
-            
-        except Exception as e:
-            logger.error(f"旧版嵌入生成失败: {str(e)}")
-            raise EmbeddingError(f"旧版嵌入生成失败: {str(e)}")
+
     
     async def batch_embed_documents(self, texts: List[str]) -> List[List[float]]:
         """批量嵌入文档（异步版本）"""

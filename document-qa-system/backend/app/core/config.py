@@ -13,12 +13,6 @@ class Settings(BaseSettings):
     QWEN_RERANK_MODEL: str = "rerank-v3"
     QWEN_LLM_MODEL: str = "qwen-max"
     
-    # Ollama Configuration (Legacy - will be deprecated)
-    OLLAMA_BASE_URL: str = "https://ollama.com"
-    OLLAMA_API_KEY: str = ""
-    EMBEDDING_MODEL: str = "bge-m3"
-    LLM_MODEL: str = "gpt-oss:20b"
-    
     # Application Settings
     APP_ENV: str = "development"
     DEBUG: bool = True

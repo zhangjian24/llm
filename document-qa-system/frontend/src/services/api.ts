@@ -12,7 +12,7 @@ const API_BASE_URL = '/api';
 // 创建axios实例
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 30000,
+  timeout: 60000,  // 60秒超时，适应文档处理和嵌入生成
   headers: {
     'Content-Type': 'application/json',
   },

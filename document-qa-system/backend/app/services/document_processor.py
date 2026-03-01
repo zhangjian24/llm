@@ -1,5 +1,6 @@
 import os
 import uuid
+import re
 from typing import List, Dict, Any
 from pathlib import Path
 import PyPDF2
@@ -113,19 +114,62 @@ class DocumentProcessor:
         except Exception as e:
             raise DocumentProcessingError(f"HTML文件处理失败: {str(e)}")
     
-    def _split_text_into_chunks(self, text: str, chunk_size: int = 1000, overlap: int = 200) -> List[str]:
-        """将文本分割成chunks用于向量化"""
+    def _split_text_into_chunks(self, text: str, chunk_size: int = 512, overlap: int = 77) -> List[str]:
+        """将文本分割成chunks用于向量化 - 基于文章推荐的最佳实践
+        Chunk Size: 512 tokens (黄金值)
+        Overlap: 15% (77 tokens) - 平衡信息完整性和索引规模
+        分隔符优先级：段落、句子、空格
+        """
         if not text:
             return []
         
-        chunks = []
-        words = text.split()
+        # 定义分隔符优先级
+        separators = [
+            "\n\n",  # 段落分隔
+            "\n",    # 行分隔
+            "。", "！", "？",  # 中文句号、感叹号、问号
+            ".", "!", "?",  # 英文句号、感叹号、问号
+            " ",     # 空格
+            ""       # 空字符串（最后兜底）
+        ]
         
-        for i in range(0, len(words), chunk_size - overlap):
-            chunk_words = words[i:i + chunk_size]
-            chunk = ' '.join(chunk_words)
-            if chunk.strip():  # 确保chunk不为空
-                chunks.append(chunk.strip())
+        # 递归字符切分逻辑
+        chunks = []
+        current_pos = 0
+        
+        while current_pos < len(text):
+            # 尝试按优先级查找分隔符
+            found_separator = None
+            separator_pos = len(text)
+            
+            for sep in separators:
+                if sep == "":
+                    continue
+                pos = text.find(sep, current_pos + chunk_size - overlap)
+                if pos != -1 and pos < separator_pos:
+                    separator_pos = pos
+                    found_separator = sep
+            
+            # 如果没有找到合适的分隔符，使用固定位置
+            if found_separator is None:
+                end_pos = min(current_pos + chunk_size, len(text))
+            else:
+                end_pos = separator_pos + len(found_separator)
+            
+            # 确保最小长度
+            if end_pos - current_pos < 20:
+                end_pos = min(current_pos + 512, len(text))
+            
+            chunk = text[current_pos:end_pos].strip()
+            if chunk and len(chunk) > 20:
+                chunks.append(chunk)
+            
+            # 更新当前位置，考虑重叠
+            current_pos = max(current_pos + chunk_size - overlap, end_pos - overlap)
+            
+            # 防止无限循环
+            if current_pos >= len(text):
+                break
         
         return chunks
     

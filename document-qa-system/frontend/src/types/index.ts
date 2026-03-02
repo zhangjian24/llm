@@ -1,96 +1,85 @@
-export interface Document {
-  document_id: string;
+/**
+ * 前端类型定义
+ */
+
+export interface DocumentMetadata {
+  doc_id: string;
   filename: string;
+  file_size: number;
+  content_type: string;
   upload_time: string;
-  status: string;
-  size: number;
+  chunk_count: number;
+}
+
+export interface SearchResult {
+  content: string;
+  metadata: Record<string, any>;
+  score: number;
+  doc_id: string;
+}
+
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: string;
+  sources?: SearchResult[];
+}
+
+export interface QueryRequest {
+  query: string;
+  conversation_id?: string;
+  stream?: boolean;
+}
+
+export interface QueryResponse {
+  answer: string;
+  sources: SearchResult[];
+  conversation_id: string;
+  processing_time: number;
+}
+
+export interface StreamChunk {
+  type: 'answer' | 'sources' | 'status' | 'error' | 'end';
+  content?: string;
+  sources?: SearchResult[];
+  done: boolean;
 }
 
 export interface DocumentUploadResponse {
-  document_id: string;
+  doc_id: string;
   filename: string;
   status: string;
   message: string;
 }
 
-export interface QueryRequest {
-  query: string;
-  document_ids?: string[];
-  top_k?: number;
-}
-
-export interface Source {
-  document_id: string;
-  filename: string;
-  score: number;
-  chunk_count: number;
-}
-
-export interface QueryResponse {
-  query: string;
-  answer: string;
-  sources: Source[];
-  confidence: number;
-}
-
 export interface DocumentListResponse {
-  documents: Document[];
-  total: number;
+  documents: DocumentMetadata[];
+  total_count: number;
 }
 
 export interface HealthCheckResponse {
   status: string;
   timestamp: string;
+  version: string;
   services: Record<string, string>;
 }
 
-// 嵌入相关类型
-export interface EmbeddingRequest {
-  input: string[];
-  model: string;
+// 组件Props类型
+export interface ChatBoxProps {
+  className?: string;
 }
 
-export interface TextEmbedding {
-  object: string;
-  embedding: number[];
-  index: number;
+export interface MessageBubbleProps {
+  message: ChatMessage;
+  isStreaming?: boolean;
 }
 
-export interface EmbeddingResponse {
-  object: string;
-  data: TextEmbedding[];
-  model: string;
-  usage: Record<string, number>;
+export interface UploadZoneProps {
+  onUploadComplete?: (response: DocumentUploadResponse) => void;
 }
 
-export interface QueryEmbeddingRequest {
-  query: string;
-}
-
-// 重排序相关类型
-export interface RerankRequest {
-  model: string;
-  query: string;
-  documents: any[];
-  top_n?: number;
-}
-
-export interface RerankResult {
-  index: number;
-  document: string;
-  relevance_score: number;
-  document_id: string;
-}
-
-export interface RerankResponse {
-  id: string;
-  results: RerankResult[];
-  usage: Record<string, number>;
-}
-
-// API密钥配置类型
-export interface ApiConfig {
-  apiKey: string;
-  apiUrl: string;
-  modelName: string;
+export interface SourcesDisplayProps {
+  sources: SearchResult[];
+  isOpen: boolean;
+  onClose: () => void;
 }

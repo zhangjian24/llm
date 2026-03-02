@@ -1,182 +1,231 @@
-import axios from 'axios';
-import { 
-  DocumentUploadResponse, 
-  QueryRequest, 
-  QueryResponse, 
+/**
+ * API服务层
+ * 封装所有后端API调用
+ */
+
+import {
+  QueryRequest,
+  QueryResponse,
+  DocumentUploadResponse,
   DocumentListResponse,
-  HealthCheckResponse 
+  HealthCheckResponse,
+  StreamChunk
 } from '../types';
 
 const API_BASE_URL = '/api';
 
-// 获取API密钥（可以从环境变量或用户设置中获取）
-const getApiKey = (): string => {
-  // 在实际应用中，这里应该从安全的地方获取API密钥
-  // 例如：localStorage、环境变量或用户登录后的token
-  return localStorage.getItem('api_key') || 'YOUR_DEFAULT_API_KEY';
+// API错误处理
+class ApiError extends Error {
+  constructor(
+    public status: number,
+    public message: string,
+    public details?: any
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
+// 基础请求配置
+const request = async <T>(
+  url: string,
+  options: RequestInit = {}
+): Promise<T> => {
+  const config: RequestInit = {
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+    ...options,
+  };
+
+  try {
+    const response = await fetch(`${API_BASE_URL}${url}`, config);
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new ApiError(
+        response.status,
+        errorData.message || `请求失败: ${response.status}`,
+        errorData
+      );
+    }
+    
+    return await response.json();
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError(500, '网络请求失败', error);
+  }
 };
 
-// 创建axios实例
-const apiClient = axios.create({
-  baseURL: API_BASE_URL,
-  timeout: 60000,  // 60秒超时，适应文档处理和嵌入生成
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// 请求拦截器
-apiClient.interceptors.request.use(
-  (config) => {
-    // 添加Bearer Token认证
-    const apiKey = getApiKey();
-    if (apiKey && apiKey !== 'YOUR_DEFAULT_API_KEY') {
-      config.headers.Authorization = `Bearer ${apiKey}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-// 响应拦截器
-apiClient.interceptors.response.use(
-  (response) => {
-    return response.data;
-  },
-  (error) => {
-    console.error('API请求错误:', error);
-    throw error;
-  }
-);
-
-// 文档相关API
-export const documentApi = {
-  // 上传文档
-  uploadDocument: async (file: File): Promise<DocumentUploadResponse> => {
-    const formData = new FormData();
-    formData.append('file', file);
-    
-    const response = await apiClient.post('/documents/upload', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
+// 文件上传请求
+const uploadRequest = async <T>(
+  url: string,
+  formData: FormData
+): Promise<T> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}${url}`, {
+      method: 'POST',
+      body: formData,
     });
-    return response;
-  },
-
-  // 获取文档列表
-  getDocuments: async (): Promise<DocumentListResponse> => {
-    const response = await apiClient.get('/documents/list');
-    return response;
-  },
-
-  // 删除文档
-  deleteDocument: async (documentId: string): Promise<void> => {
-    await apiClient.delete(`/documents/${documentId}`);
-  },
-
-  // 获取文档详情
-  getDocumentInfo: async (documentId: string): Promise<any> => {
-    const response = await apiClient.get(`/documents/${documentId}/info`);
-    return response;
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new ApiError(
+        response.status,
+        errorData.message || `上传失败: ${response.status}`,
+        errorData
+      );
+    }
+    
+    return await response.json();
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError(500, '文件上传失败', error);
   }
 };
 
 // 聊天相关API
 export const chatApi = {
-  // 查询文档
-  queryDocuments: async (request: QueryRequest): Promise<QueryResponse> => {
-    const response = await apiClient.post('/chat/query', request);
-    return response;
+  // 同步查询
+  query: async (data: QueryRequest): Promise<QueryResponse> => {
+    return request('/chat/query', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
   },
 
-  // 对话聊天
-  chatConversation: async (request: QueryRequest): Promise<any> => {
-    const response = await apiClient.post('/chat/chat', request);
-    return response;
+  // 流式查询
+  streamQuery: async (
+    data: QueryRequest,
+    onChunk: (chunk: StreamChunk) => void,
+    onError?: (error: Error) => void
+  ): Promise<void> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/chat/stream`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ ...data, stream: true }),
+      });
+
+      if (!response.ok) {
+        throw new ApiError(response.status, '流式请求失败');
+      }
+
+      if (!response.body) {
+        throw new Error('响应体为空');
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          
+          if (done) break;
+          
+          const chunk = decoder.decode(value);
+          const lines = chunk.split('\n');
+          
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = line.slice(6);
+              if (data === '[DONE]') {
+                return;
+              }
+              
+              try {
+                const parsedData = JSON.parse(data);
+                onChunk(parsedData);
+              } catch (parseError) {
+                console.warn('解析流数据失败:', parseError);
+              }
+            }
+          }
+        }
+      } finally {
+        reader.releaseLock();
+      }
+    } catch (error) {
+      if (error instanceof ApiError) {
+        onError?.(error);
+      } else {
+        onError?.(new Error(`流式请求失败: ${error}`));
+      }
+    }
   },
 
-  // 获取查询建议
-  getQuerySuggestions: async (documentIds?: string[]): Promise<{suggestions: string[]}> => {
-    const params = documentIds ? { document_ids: documentIds.join(',') } : {};
-    const response = await apiClient.get('/chat/suggestions', { params });
-    return response;
+  // 获取对话历史
+  getHistory: async (conversationId: string) => {
+    return request(`/chat/history/${conversationId}`);
+  },
+
+  // 清除对话历史
+  clearHistory: async (conversationId: string) => {
+    return request(`/chat/history/${conversationId}`, {
+      method: 'DELETE',
+    });
+  },
+
+  // 测试连接
+  testConnection: async () => {
+    return request('/chat/test');
+  }
+};
+
+// 文档相关API
+export const documentApi = {
+  // 上传文档
+  upload: async (file: File): Promise<DocumentUploadResponse> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    return uploadRequest('/documents/upload', formData);
+  },
+
+  // 获取文档列表
+  list: async (): Promise<DocumentListResponse> => {
+    return request('/documents');
+  },
+
+  // 删除文档
+  delete: async (docId: string) => {
+    return request(`/documents/${docId}`, {
+      method: 'DELETE',
+    });
+  },
+
+  // 获取文档信息
+  getInfo: async (docId: string) => {
+    return request(`/documents/${docId}/info`);
   }
 };
 
 // 健康检查API
 export const healthApi = {
-  // 健康检查
-  checkHealth: async (): Promise<HealthCheckResponse> => {
-    const response = await apiClient.get('/health');
-    return response;
+  check: async (): Promise<HealthCheckResponse> => {
+    return request('/health');
   },
 
-  // 获取版本信息
-  getVersion: async (): Promise<any> => {
-    const response = await apiClient.get('/version');
-    return response;
+  ready: async () => {
+    return request('/health/ready');
   },
 
-  // 获取系统统计
-  getStats: async (): Promise<any> => {
-    const response = await apiClient.get('/stats');
-    return response;
+  live: async () => {
+    return request('/health/live');
   }
 };
 
-// 嵌入相关API
-export const embeddingApi = {
-  // 创建文本嵌入
-  createEmbeddings: async (texts: string[]): Promise<any> => {
-    const response = await apiClient.post('/embeddings', {
-      input: texts,
-      model: 'text-embedding-v4'
-    });
-    return response;
-  },
-
-  // 为查询创建嵌入
-  createQueryEmbedding: async (query: string): Promise<any> => {
-    const response = await apiClient.post('/embeddings/query', {
-      query
-    });
-    return response;
-  },
-
-  // 获取可用模型列表
-  getModels: async (): Promise<any> => {
-    const response = await apiClient.get('/embeddings/models');
-    return response;
-  }
+// 默认导出所有API
+export default {
+  chat: chatApi,
+  documents: documentApi,
+  health: healthApi
 };
-
-// 重排序相关API
-export const rerankApi = {
-  // 文档重排序
-  rerankDocuments: async (query: string, documents: any[], topN: number = 10): Promise<any> => {
-    const response = await apiClient.post('/rerank', {
-      model: 'rerank-v3',
-      query,
-      documents,
-      top_n: topN
-    });
-    return response;
-  },
-
-  // 批量重排序
-  batchRerank: async (requests: any[]): Promise<any> => {
-    const response = await apiClient.post('/rerank/batch', requests);
-    return response;
-  },
-
-  // 获取重排序模型列表
-  getModels: async (): Promise<any> => {
-    const response = await apiClient.get('/rerank/models');
-    return response;
-  }
-};
-
-export default apiClient;

@@ -1,58 +1,105 @@
+"""
+应用配置管理模块
+负责加载和管理系统配置
+"""
+
+from typing import Optional
 from pydantic_settings import BaseSettings
-from typing import List
-import os
+from pydantic import Field
+
 
 class Settings(BaseSettings):
-    # Pinecone Configuration
-    PINECONE_API_KEY: str
-    PINECONE_INDEX_NAME: str = "document-qa-index"
+    """
+    应用配置类
     
-    # Alibaba Cloud Qwen Configuration
-    QWEN_API_KEY: str = ""
-    QWEN_EMBEDDING_MODEL: str = "text-embedding-v4"
-    QWEN_RERANK_MODEL: str = "rerank-v3"
-    QWEN_LLM_MODEL: str = "qwen-max"
-    
-    # Application Settings
-    APP_ENV: str = "development"
-    DEBUG: bool = True
-    LOG_LEVEL: str = "INFO"
-    
-    # Server Configuration
-    HOST: str = "0.0.0.0"
-    PORT: int = 8000
-    SERVER_HOST: str = "localhost"  # 新增字段
-    SERVER_PORT: int = 8000        # 新增字段
-    
-    # Upload Settings
-    MAX_FILE_SIZE: int = 10 * 1024 * 1024  # 10MB
-    ALLOWED_EXTENSIONS: str = ".pdf,.txt,.docx,.doc,.html,.htm"
-    UPLOAD_FOLDER: str = "./uploads"
-    
-    # Document Processing Settings
-    CHUNK_SIZE: int = 512          # 新增字段
-    CHUNK_OVERLAP: int = 77        # 新增字段
-    
-    @property
-    def allowed_extensions_list(self) -> List[str]:
-        return [ext.strip() for ext in self.ALLOWED_EXTENSIONS.split(",") if ext.strip()]
-    
-    # Vector Store Settings
-    VECTOR_DIMENSION: int = 768
-    TOP_K_RESULTS: int = 5
-    SCORE_THRESHOLD: float = 0.7
-    
-    # Reranking Settings
-    RERANK_TOP_K: int = 10
-    RERANK_SCORE_THRESHOLD: float = 0.8
-    
-    # Model Settings
-    MAX_TOKENS: int = 2048
-    TEMPERATURE: float = 0.7
-    
-    class Config:
-        env_file = [".env.local", ".env"]  # 优先加载 .env.local，然后是 .env
-        env_file_encoding = "utf-8"
-        extra = "ignore"  # 忽略额外的环境变量
+    从环境变量加载配置，支持.env文件
+    """
 
+    # OpenAI兼容接口配置
+    OPENAI_BASE_URL: str = Field(
+        default="https://api.openai.com/v1",
+        description="OpenAI兼容接口的基础URL"
+    )
+    OPENAI_API_KEY: str = Field(
+        ...,
+        description="API密钥"
+    )
+
+    # Pinecone配置
+    PINECONE_API_KEY: str = Field(
+        ...,
+        description="Pinecone API密钥"
+    )
+    PINECONE_INDEX_NAME: str = Field(
+        default="document-qa-index",
+        description="Pinecone索引名称"
+    )
+    PINECONE_ENVIRONMENT: Optional[str] = Field(
+        default=None,
+        description="Pinecone环境(对于serverless可为空)"
+    )
+
+    # 应用配置
+    APP_ENV: str = Field(
+        default="development",
+        description="应用环境"
+    )
+    DEBUG: bool = Field(
+        default=True,
+        description="调试模式"
+    )
+    LOG_LEVEL: str = Field(
+        default="INFO",
+        description="日志级别"
+    )
+
+    # 服务器配置
+    HOST: str = Field(
+        default="localhost",
+        description="服务器主机"
+    )
+    PORT: int = Field(
+        default=8000,
+        description="服务器端口"
+    )
+
+    # RAG配置参数
+    CHUNK_SIZE: int = Field(
+        default=1000,
+        description="文本分块大小"
+    )
+    CHUNK_OVERLAP: int = Field(
+        default=200,
+        description="文本分块重叠大小"
+    )
+    TOP_K_RETRIEVAL: int = Field(
+        default=20,
+        description="检索阶段返回的文档数量"
+    )
+    TOP_N_RERANK: int = Field(
+        default=5,
+        description="重排序后保留的文档数量"
+    )
+
+    # 模型配置
+    EMBEDDING_MODEL: str = Field(
+        default="text-embedding-v4",
+        description="嵌入模型名称"
+    )
+    RERANK_MODEL: str = Field(
+        default="rerank-v3",
+        description="重排序模型名称"
+    )
+    CHAT_MODEL: str = Field(
+        default="qwen-max",
+        description="聊天模型名称"
+    )
+
+    class Config:
+        env_file = ".env.local"
+        env_file_encoding = "utf-8"
+        case_sensitive = False
+
+
+# 全局配置实例
 settings = Settings()

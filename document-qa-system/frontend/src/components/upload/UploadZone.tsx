@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { DocumentUploadResponse } from '../../types';
+import { documentApi } from '../../services/api';
 
 interface UploadZoneProps {
   onUploadComplete?: (response: DocumentUploadResponse) => void;
@@ -50,34 +51,28 @@ const UploadZone: React.FC<UploadZoneProps> = ({
         });
       }, 200);
 
-      // 这里会调用实际的上传API
-      // 暂时使用模拟响应
+      // 调用实际的上传API
+      const response = await documentApi.upload(file);
+      
+      clearInterval(interval);
+      setProgress(100);
+      
+      setUploadStatus('success');
+      onUploadComplete?.(response);
+      
+      // 2秒后重置状态
       setTimeout(() => {
-        clearInterval(interval);
-        setProgress(100);
-        
-        const mockResponse: DocumentUploadResponse = {
-          doc_id: 'mock-doc-' + Date.now(),
-          filename: file.name,
-          status: 'success',
-          message: `文档 "${file.name}" 上传成功并已完成处理`
-        };
-        
-        setUploadStatus('success');
-        onUploadComplete?.(mockResponse);
-        
-        // 2秒后重置状态
-        setTimeout(() => {
-          setUploadStatus('idle');
-          setProgress(0);
-        }, 2000);
-        
+        setUploadStatus('idle');
+        setProgress(0);
       }, 2000);
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('上传失败:', error);
       setUploadStatus('error');
       setProgress(0);
+      
+      // 显示错误信息
+      alert(`上传失败: ${error.message || '未知错误'}`);
     }
   };
 

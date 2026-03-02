@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useChatStore } from '../../stores/chatStore';
-import { ChatMessage } from '../../types';
+import { ChatMessage, QueryRequest } from '../../types';
 import MessageBubble from './MessageBubble';
 import UploadZone from '../upload/UploadZone';
+import { chatApi } from '../../services/api';
 
 interface ChatBoxProps {
   className?: string;
@@ -40,20 +41,32 @@ const ChatBox: React.FC<ChatBoxProps> = ({ className = '' }) => {
     setIsLoading(true);
 
     try {
-      // 这里会调用实际的API
-      // 暂时使用模拟响应
-      setTimeout(() => {
-        const botMessage: ChatMessage = {
-          role: 'assistant',
-          content: `这是对"${userMessage.content}"的模拟回答。在实际应用中，这里会调用RAG系统的API来获取基于文档的智能回答。`,
-          timestamp: new Date().toISOString()
-        };
-        addMessage(botMessage);
-        setIsLoading(false);
-      }, 1500);
+      // 调用实际的聊天API
+      const requestData: QueryRequest = {
+        query: userMessage.content,
+        conversation_id: 'default-conversation',
+        stream: false
+      };
       
-    } catch (error) {
+      const response = await chatApi.query(requestData);
+      
+      const botMessage: ChatMessage = {
+        role: 'assistant',
+        content: response.answer,
+        timestamp: new Date().toISOString()
+      };
+      addMessage(botMessage);
+      setIsLoading(false);
+      
+    } catch (error: any) {
       console.error('发送消息失败:', error);
+      // 显示错误消息
+      const errorMessage: ChatMessage = {
+        role: 'assistant',
+        content: `抱歉，处理您的问题时出现错误: ${error.message || '未知错误'}`,
+        timestamp: new Date().toISOString()
+      };
+      addMessage(errorMessage);
       setIsLoading(false);
     }
   };

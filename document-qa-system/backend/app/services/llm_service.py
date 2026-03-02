@@ -4,6 +4,7 @@ LLM服务封装
 """
 
 import json
+import time
 from typing import List, Dict, Any, Optional, AsyncGenerator
 import httpx
 from openai import AsyncOpenAI
@@ -28,16 +29,26 @@ class LLMService:
     async def initialize(self) -> None:
         """初始化LLM服务"""
         try:
-            logger.info("正在初始化LLM服务...")
+            # 请求接收阶段 - INFO级别
+            logger.info(f"[LLM_INIT] 开始初始化LLM服务")
             
-            # 初始化OpenAI客户端
+            # 数据验证阶段 - DEBUG级别
+            logger.debug(f"[LLM_INIT] 初始化参数验证 - 基础URL: {settings.OPENAI_BASE_URL}, API密钥长度: {len(settings.OPENAI_API_KEY) if settings.OPENAI_API_KEY else 0}")
+            
+            # 初始化OpenAI客户端 - 外部服务调用阶段
+            logger.info(f"[LLM_INIT] 正在初始化OpenAI客户端 - 模型配置: {{'embedding': '{settings.EMBEDDING_MODEL}', 'rerank': '{settings.RERANK_MODEL}', 'chat': '{settings.CHAT_MODEL}'}}")
+            client_init_start = time.time()
             self.client = AsyncOpenAI(
                 base_url=settings.OPENAI_BASE_URL,
                 api_key=settings.OPENAI_API_KEY,
                 timeout=30.0
             )
+            client_init_time = time.time() - client_init_start
+            logger.info(f"[LLM_INIT] OpenAI客户端初始化完成 - 耗时: {client_init_time:.2f}s")
             
-            # 初始化聊天模型
+            # 初始化聊天模型 - 业务逻辑处理阶段
+            logger.info(f"[LLM_INIT] 正在初始化聊天模型 - 模型: {settings.CHAT_MODEL}")
+            chat_model_init_start = time.time()
             self.chat_model = ChatOpenAI(
                 model=settings.CHAT_MODEL,
                 openai_api_base=settings.OPENAI_BASE_URL,
@@ -46,21 +57,34 @@ class LLMService:
                 temperature=0.7,
                 max_tokens=2048
             )
+            chat_model_init_time = time.time() - chat_model_init_start
+            logger.info(f"[LLM_INIT] 聊天模型初始化完成 - 耗时: {chat_model_init_time:.2f}s")
             
-            # 初始化嵌入模型
+            # 初始化嵌入模型 - 业务逻辑处理阶段
+            logger.info(f"[LLM_INIT] 正在初始化嵌入模型 - 模型: {settings.EMBEDDING_MODEL}")
+            embedding_model_init_start = time.time()
             self.embedding_model = OpenAIEmbeddings(
                 model=settings.EMBEDDING_MODEL,
                 openai_api_base=settings.OPENAI_BASE_URL,
                 openai_api_key=settings.OPENAI_API_KEY
             )
+            embedding_model_init_time = time.time() - embedding_model_init_start
+            logger.info(f"[LLM_INIT] 嵌入模型初始化完成 - 耗时: {embedding_model_init_time:.2f}s")
             
-            # 初始化HTTP客户端用于自定义API调用
+            # 初始化HTTP客户端用于自定义API调用 - 业务逻辑处理阶段
+            logger.info(f"[LLM_INIT] 正在初始化HTTP客户端")
+            http_client_init_start = time.time()
             self.http_client = httpx.AsyncClient(timeout=30.0)
+            http_client_init_time = time.time() - http_client_init_start
+            logger.info(f"[LLM_INIT] HTTP客户端初始化完成 - 耗时: {http_client_init_time:.2f}s")
             
-            logger.info("LLM服务初始化成功")
+            # 响应返回阶段 - INFO级别
+            total_time = client_init_time + chat_model_init_time + embedding_model_init_time + http_client_init_time
+            logger.info(f"[LLM_INIT] LLM服务初始化成功 - 总耗时: {total_time:.2f}s")
             
         except Exception as e:
-            logger.error(f"LLM服务初始化失败: {str(e)}")
+            # 异常处理 - ERROR级别
+            logger.error(f"[LLM_INIT] LLM服务初始化失败 - 错误类型: {type(e).__name__}, 错误信息: {str(e)}", exc_info=True)
             raise
     
     async def generate_embeddings(self, texts: List[str]) -> List[List[float]]:
@@ -74,16 +98,29 @@ class LLMService:
             嵌入向量列表
         """
         try:
+            # 请求接收阶段 - INFO级别
+            logger.info(f"[LLM_EMBEDDING] 开始生成文本嵌入向量 - 文本数量: {len(texts)}, 使用模型: {settings.EMBEDDING_MODEL}")
+            
+            # 数据验证阶段 - DEBUG级别
             if not self.embedding_model:
+                logger.error(f"[LLM_EMBEDDING] 嵌入模型未初始化")
                 raise ValueError("嵌入模型未初始化")
             
-            logger.info(f"正在生成 {len(texts)} 个文本的嵌入向量...")
+            logger.debug(f"[LLM_EMBEDDING] 输入文本验证 - 平均长度: {sum(len(text) for text in texts)//len(texts) if texts else 0} 字符, 总字符数: {sum(len(text) for text in texts)}")
+            
+            # 外部服务调用阶段
+            logger.info(f"[LLM_EMBEDDING] 正在调用嵌入模型API")
+            embedding_start = time.time()
             embeddings = await self.embedding_model.aembed_documents(texts)
-            logger.info("嵌入向量生成完成")
+            embedding_time = time.time() - embedding_start
+            
+            # 响应返回阶段 - INFO级别
+            logger.info(f"[LLM_EMBEDDING] 嵌入向量生成完成 - 向量数量: {len(embeddings)}, 向量维度: {len(embeddings[0]) if embeddings else 0}, 耗时: {embedding_time:.2f}s")
             return embeddings
             
         except Exception as e:
-            logger.error(f"嵌入向量生成失败: {str(e)}")
+            # 异常处理 - ERROR级别
+            logger.error(f"[LLM_EMBEDDING] 嵌入向量生成失败 - 文本数量: {len(texts)}, 错误类型: {type(e).__name__}, 错误信息: {str(e)}", exc_info=True)
             raise
     
     async def rerank_documents(
@@ -102,9 +139,14 @@ class LLMService:
             重排序后的文档列表
         """
         try:
-            logger.info(f"正在重排序 {len(documents)} 个文档...")
+            # 请求接收阶段 - INFO级别
+            logger.info(f"[LLM_RERANK] 开始文档重排序 - 查询内容: {query[:50]}..., 文档数量: {len(documents)}, 使用模型: {settings.RERANK_MODEL}")
             
-            # 准备rerank请求数据
+            # 数据验证阶段 - DEBUG级别
+            logger.debug(f"[LLM_RERANK] 重排序参数验证 - 查询长度: {len(query)} 字符, 文档详情: {{'avg_doc_length': {sum(len(doc.content) for doc in documents)//len(documents) if documents else 0}, 'top_scores': sorted([doc.score for doc in documents], reverse=True)[:3] if documents else []}}")
+            
+            # 准备rerank请求数据 - 业务逻辑处理阶段
+            logger.debug(f"[LLM_RERANK] 准备rerank请求数据")
             rerank_data = {
                 "model": settings.RERANK_MODEL,
                 "query": query,
@@ -112,7 +154,9 @@ class LLMService:
                 "top_n": settings.TOP_N_RERANK
             }
             
-            # 调用rerank API
+            # 调用rerank API - 外部服务调用阶段
+            logger.info(f"[LLM_RERANK] 正在调用rerank API")
+            rerank_start = time.time()
             response = await self.http_client.post(
                 f"{settings.OPENAI_BASE_URL}/rerank",
                 headers={
@@ -121,22 +165,30 @@ class LLMService:
                 },
                 json=rerank_data
             )
+            rerank_time = time.time() - rerank_start
             
             if response.status_code == 200:
                 result = response.json()
                 reranked_indices = [item["index"] for item in result.get("results", [])]
                 
-                # 根据重排序结果重新排列文档
+                # 根据重排序结果重新排列文档 - 业务逻辑处理阶段
                 reranked_docs = [documents[i] for i in reranked_indices]
-                logger.info(f"文档重排序完成，返回前 {len(reranked_docs)} 个结果")
+                logger.info(f"[LLM_RERANK] 文档重排序完成 - 重排序后保留 {len(reranked_docs)} 个文档, 耗时: {rerank_time:.2f}s")
+                
+                # 响应返回阶段 - DEBUG级别
+                if reranked_docs:
+                    new_scores = [reranked_docs[i].score for i in range(min(3, len(reranked_docs)))]
+                    logger.debug(f"[LLM_RERANK] 重排序结果详情 - 前3个文档得分: {[f'{score:.3f}' for score in new_scores]}")
+                
                 return reranked_docs
             else:
-                logger.warning(f"Rerank API调用失败，使用原始排序: {response.status_code}")
+                logger.warning(f"[LLM_RERANK] Rerank API调用失败，使用原始排序 - 状态码: {response.status_code}, 耗时: {rerank_time:.2f}s")
                 # 如果rerank失败，返回前N个原始结果
                 return documents[:settings.TOP_N_RERANK]
                 
         except Exception as e:
-            logger.warning(f"文档重排序失败，使用原始排序: {str(e)}")
+            # 异常处理 - WARNING级别
+            logger.warning(f"[LLM_RERANK] 文档重排序失败，使用原始排序 - 错误类型: {type(e).__name__}, 错误信息: {str(e)}")
             # 如果rerank失败，返回前N个原始结果
             return documents[:settings.TOP_N_RERANK]
     
@@ -158,12 +210,18 @@ class LLMService:
             生成的回答
         """
         try:
+            # 请求接收阶段 - INFO级别
+            logger.info(f"[LLM_GENERATE_ANSWER] 开始生成回答 - 查询内容: {query[:50]}..., 使用模型: {settings.CHAT_MODEL}")
+            
+            # 数据验证阶段 - DEBUG级别
             if not self.chat_model:
+                logger.error(f"[LLM_GENERATE_ANSWER] 聊天模型未初始化")
                 raise ValueError("聊天模型未初始化")
             
-            logger.info(f"正在生成回答，查询: {query[:50]}...")
+            logger.debug(f"[LLM_GENERATE_ANSWER] 输入参数验证 - 查询长度: {len(query)} 字符, 上下文长度: {len(context)} 字符, 历史消息数: {len(conversation_history) if conversation_history else 0}")
             
-            # 构建提示词模板
+            # 构建提示词模板 - 业务逻辑处理阶段
+            logger.debug(f"[LLM_GENERATE_ANSWER] 正在构建提示词模板")
             prompt_template = ChatPromptTemplate.from_messages([
                 ("system", """你是一个专业的文档问答助手。请基于提供的上下文信息准确回答用户的问题。
 
@@ -183,14 +241,17 @@ class LLMService:
 请根据上述信息回答用户问题：""")
             ])
             
-            # 准备对话历史
+            # 准备对话历史 - 业务逻辑处理阶段
             history_str = ""
             if conversation_history:
+                logger.debug(f"[LLM_GENERATE_ANSWER] 处理对话历史 - 保留最近3轮对话")
                 for msg in conversation_history[-3:]:  # 只保留最近3轮对话
                     role = "用户" if msg["role"] == "user" else "助手"
                     history_str += f"{role}: {msg['content']}\n"
             
-            # 生成回答
+            # 生成回答 - 外部服务调用阶段
+            logger.info(f"[LLM_GENERATE_ANSWER] 正在调用LLM生成回答")
+            generation_start = time.time()
             response = await self.chat_model.ainvoke(
                 prompt_template.format_messages(
                     context=context,
@@ -198,13 +259,18 @@ class LLMService:
                     query=query
                 )
             )
+            generation_time = time.time() - generation_start
             
             answer = response.content
-            logger.info("回答生成完成")
+            
+            # 响应返回阶段 - INFO级别
+            logger.info(f"[LLM_GENERATE_ANSWER] 回答生成完成 - 回答长度: {len(answer)} 字符, 耗时: {generation_time:.2f}s")
+            logger.debug(f"[LLM_GENERATE_ANSWER] 回答内容预览: {answer[:100]}...")
             return answer
             
         except Exception as e:
-            logger.error(f"回答生成失败: {str(e)}")
+            # 异常处理 - ERROR级别
+            logger.error(f"[LLM_GENERATE_ANSWER] 回答生成失败 - 查询内容: {query[:50]}..., 错误类型: {type(e).__name__}, 错误信息: {str(e)}", exc_info=True)
             raise
     
     async def stream_answer(
@@ -225,26 +291,45 @@ class LLMService:
             生成的文本片段
         """
         try:
+            # 请求接收阶段 - INFO级别
+            logger.info(f"[LLM_STREAM_ANSWER] 开始流式生成回答 - 查询内容: {query[:50]}..., 使用模型: {settings.CHAT_MODEL}")
+            
+            # 数据验证阶段 - DEBUG级别
             if not self.chat_model:
+                logger.error(f"[LLM_STREAM_ANSWER] 聊天模型未初始化")
                 raise ValueError("聊天模型未初始化")
             
-            logger.info(f"正在流式生成回答，查询: {query[:50]}...")
+            logger.debug(f"[LLM_STREAM_ANSWER] 流式输入参数验证 - 查询长度: {len(query)} 字符, 上下文长度: {len(context)} 字符")
             
-            # 构建提示词
+            # 构建提示词 - 业务逻辑处理阶段
+            logger.debug(f"[LLM_STREAM_ANSWER] 正在构建流式提示词")
             prompt_template = ChatPromptTemplate.from_messages([
                 ("system", "你是一个专业的文档问答助手。请基于提供的上下文信息准确回答用户的问题。"),
                 ("human", "上下文信息：\n{context}\n\n用户问题：{query}\n\n请回答：")
             ])
             
-            # 流式调用
+            # 流式调用 - 外部服务调用阶段
+            logger.info(f"[LLM_STREAM_ANSWER] 正在执行流式调用")
+            stream_start = time.time()
+            chunk_count = 0
+            
             async for chunk in self.chat_model.astream(
                 prompt_template.format_messages(context=context, query=query)
             ):
                 if chunk.content:
+                    chunk_count += 1
+                    # 外部服务调用阶段 - DEBUG级别（针对每个chunk）
+                    logger.debug(f"[LLM_STREAM_ANSWER] 流式chunk生成 - 第{chunk_count}个chunk, 长度: {len(chunk.content)} 字符")
                     yield chunk.content
+            
+            stream_time = time.time() - stream_start
+            
+            # 响应返回阶段 - INFO级别
+            logger.info(f"[LLM_STREAM_ANSWER] 流式回答生成完成 - 总chunk数: {chunk_count}, 总耗时: {stream_time:.2f}s")
                     
         except Exception as e:
-            logger.error(f"流式回答生成失败: {str(e)}")
+            # 异常处理 - ERROR级别
+            logger.error(f"[LLM_STREAM_ANSWER] 流式回答生成失败 - 查询内容: {query[:50]}..., 错误类型: {type(e).__name__}, 错误信息: {str(e)}", exc_info=True)
             yield f"抱歉，生成回答时出现错误：{str(e)}"
     
     async def tokenize_text(self, text: str) -> List[str]:

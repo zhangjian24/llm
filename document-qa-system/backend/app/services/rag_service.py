@@ -52,26 +52,36 @@ class RAGService:
         """
         try:
             start_time = time.time()
-            logger.info(f"开始处理文档: {metadata.filename}")
+            # 请求接收阶段 - INFO级别
+            logger.info(f"[RAG_PROCESS_DOC] 开始处理文档 - 文件名: {metadata.filename}, 文档ID: {metadata.doc_id}")
             
-            # 1. 文本分块
-            logger.info("正在进行文本分块...")
+            # 数据验证阶段 - DEBUG级别
+            logger.debug(f"[RAG_PROCESS_DOC] 文档内容验证 - 原始内容长度: {len(content)} 字符")
+            
+            # 1. 文本分块 - 业务逻辑处理阶段
+            logger.info(f"[RAG_PROCESS_DOC] 正在进行文本分块 - 分块大小: {settings.CHUNK_SIZE}, 重叠: {settings.CHUNK_OVERLAP}")
             chunks = self.text_splitter.split_text(content)
             metadata.chunk_count = len(chunks)
-            logger.info(f"文本分块完成，共 {len(chunks)} 个分块")
+            logger.info(f"[RAG_PROCESS_DOC] 文本分块完成 - 分块数量: {len(chunks)}")
+            logger.debug(f"[RAG_PROCESS_DOC] 分块详情 - 平均长度: {sum(len(chunk) for chunk in chunks)//len(chunks) if chunks else 0} 字符")
             
-            # 2. 向量化
-            logger.info("正在进行文本向量化...")
+            # 2. 向量化 - 外部服务调用阶段
+            logger.info(f"[RAG_PROCESS_DOC] 正在进行文本向量化 - 使用模型: {settings.EMBEDDING_MODEL}")
+            embeddings_start = time.time()
             embeddings = await self.llm_service.generate_embeddings(chunks)
-            logger.info("文本向量化完成")
+            embeddings_time = time.time() - embeddings_start
+            logger.info(f"[RAG_PROCESS_DOC] 文本向量化完成 - 向量维度: {len(embeddings[0]) if embeddings else 0}, 耗时: {embeddings_time:.2f}s")
             
-            # 3. 存储到向量数据库
-            logger.info("正在存储到向量数据库...")
+            # 3. 存储到向量数据库 - 外部服务调用阶段
+            logger.info(f"[RAG_PROCESS_DOC] 正在存储到向量数据库 - 索引: {settings.PINECONE_INDEX_NAME}")
+            storage_start = time.time()
             chunk_ids = await self.pinecone_service.store_document_chunks(chunks, metadata)
-            logger.info("向量存储完成")
+            storage_time = time.time() - storage_start
+            logger.info(f"[RAG_PROCESS_DOC] 向量存储完成 - 存储分块数: {len(chunk_ids)}, 耗时: {storage_time:.2f}s")
             
             processing_time = time.time() - start_time
-            logger.info(f"文档处理完成，耗时: {processing_time:.2f}秒")
+            # 响应返回阶段 - INFO级别
+            logger.info(f"[RAG_PROCESS_DOC] 文档处理完成 - 文档ID: {metadata.doc_id}, 总耗时: {processing_time:.2f}s (分块: {len(chunks)}, 向量化: {embeddings_time:.2f}s, 存储: {storage_time:.2f}s)")
             
             return {
                 "success": True,
@@ -83,7 +93,8 @@ class RAGService:
             }
             
         except Exception as e:
-            logger.error(f"文档处理失败: {str(e)}")
+            # 异常处理 - ERROR级别
+            logger.error(f"[RAG_PROCESS_DOC] 文档处理失败 - 文档ID: {metadata.doc_id}, 错误类型: {type(e).__name__}, 错误信息: {str(e)}", exc_info=True)
             return {
                 "success": False,
                 "error": str(e),
@@ -105,46 +116,61 @@ class RAGService:
         """
         try:
             start_time = time.time()
-            logger.info(f"开始处理查询: {query_request.query}")
+            # 请求接收阶段 - INFO级别
+            logger.info(f"[RAG_QUERY] 开始处理查询 - 查询内容: {query_request.query[:100]}..., 对话ID: {query_request.conversation_id}")
             
-            # 1. 检索阶段：从向量数据库检索相关文档
-            logger.info("正在进行文档检索...")
+            # 数据验证阶段 - DEBUG级别
+            logger.debug(f"[RAG_QUERY] 查询参数验证 - 参数详情: {{'query_length': {len(query_request.query)}, 'top_k': {settings.TOP_K_RETRIEVAL}, 'top_n': {settings.TOP_N_RERANK}}}")
+            
+            # 1. 检索阶段：从向量数据库检索相关文档 - 外部服务调用阶段
+            logger.info(f"[RAG_QUERY] 正在进行文档检索 - Top-K: {settings.TOP_K_RETRIEVAL}")
+            retrieval_start = time.time()
             search_results = await self.pinecone_service.search_similar_documents(
                 query_request.query,
                 top_k=settings.TOP_K_RETRIEVAL
             )
-            logger.info(f"检索到 {len(search_results)} 个相关文档")
+            retrieval_time = time.time() - retrieval_start
+            logger.info(f"[RAG_QUERY] 文档检索完成 - 检索到 {len(search_results)} 个相关文档, 耗时: {retrieval_time:.2f}s")
+            logger.debug(f"[RAG_QUERY] 检索结果详情 - 最高得分: {max([r.score for r in search_results], default=0):.3f}, 平均得分: {sum([r.score for r in search_results])/len(search_results) if search_results else 0:.3f}")
             
-            # 2. 重排序阶段：使用rerank模型重排序
-            logger.info("正在进行文档重排序...")
+            # 2. 重排序阶段：使用rerank模型重排序 - 外部服务调用阶段
+            logger.info(f"[RAG_QUERY] 正在进行文档重排序 - 使用模型: {settings.RERANK_MODEL}, Top-N: {settings.TOP_N_RERANK}")
+            rerank_start = time.time()
             reranked_results = await self.llm_service.rerank_documents(
                 query_request.query,
                 search_results
             )
-            logger.info(f"重排序后保留 {len(reranked_results)} 个文档")
+            rerank_time = time.time() - rerank_start
+            logger.info(f"[RAG_QUERY] 文档重排序完成 - 重排序后保留 {len(reranked_results)} 个文档, 耗时: {rerank_time:.2f}s")
             
-            # 3. 上下文构建：合并重排序后的文档内容
-            logger.info("正在构建上下文...")
+            # 3. 上下文构建：合并重排序后的文档内容 - 业务逻辑处理阶段
+            logger.info(f"[RAG_QUERY] 正在构建上下文")
+            context_build_start = time.time()
             context = self._build_context(reranked_results)
-            logger.info(f"上下文构建完成，长度: {len(context)} 字符")
+            context_build_time = time.time() - context_build_start
+            logger.info(f"[RAG_QUERY] 上下文构建完成 - 上下文长度: {len(context)} 字符, 耗时: {context_build_time:.2f}s")
             
-            # 4. 生成阶段：调用LLM生成回答
-            logger.info("正在生成回答...")
+            # 4. 生成阶段：调用LLM生成回答 - 外部服务调用阶段
+            logger.info(f"[RAG_QUERY] 正在生成回答 - 使用模型: {settings.CHAT_MODEL}")
+            generation_start = time.time()
             
             # 获取对话历史
             conversation_history = self.conversation_history.get(
                 query_request.conversation_id, []
             ) if query_request.conversation_id else []
+            logger.debug(f"[RAG_QUERY] 对话历史获取 - 历史消息数: {len(conversation_history)}")
             
             answer = await self.llm_service.generate_answer(
                 query_request.query,
                 context,
                 conversation_history
             )
-            logger.info("回答生成完成")
+            generation_time = time.time() - generation_start
+            logger.info(f"[RAG_QUERY] 回答生成完成 - 回答长度: {len(answer)} 字符, 耗时: {generation_time:.2f}s")
             
-            # 更新对话历史
+            # 更新对话历史 - 业务逻辑处理阶段
             if query_request.conversation_id:
+                logger.debug(f"[RAG_QUERY] 更新对话历史 - 对话ID: {query_request.conversation_id}")
                 self._update_conversation_history(
                     query_request.conversation_id,
                     query_request.query,
@@ -163,11 +189,13 @@ class RAGService:
                 processing_time=processing_time
             )
             
-            logger.info(f"查询处理完成，总耗时: {processing_time:.2f}秒")
+            # 响应返回阶段 - INFO级别
+            logger.info(f"[RAG_QUERY] 查询处理完成 - 对话ID: {conversation_id}, 总耗时: {processing_time:.2f}s (检索: {retrieval_time:.2f}s, 重排序: {rerank_time:.2f}s, 上下文构建: {context_build_time:.2f}s, 生成: {generation_time:.2f}s)")
             return response
             
         except Exception as e:
-            logger.error(f"查询处理失败: {str(e)}")
+            # 异常处理 - ERROR级别
+            logger.error(f"[RAG_QUERY] 查询处理失败 - 错误类型: {type(e).__name__}, 错误信息: {str(e)}", exc_info=True)
             raise
     
     async def stream_query_documents(
@@ -185,31 +213,43 @@ class RAGService:
         """
         try:
             start_time = time.time()
-            logger.info(f"开始流式处理查询: {query_request.query}")
+            # 请求接收阶段 - INFO级别
+            logger.info(f"[RAG_STREAM_QUERY] 开始流式处理查询 - 查询内容: {query_request.query[:100]}..., 对话ID: {query_request.conversation_id}")
             
-            # 1. 检索阶段
+            # 数据验证阶段 - DEBUG级别
+            logger.debug(f"[RAG_STREAM_QUERY] 流式查询参数验证 - 参数详情: {{'query_length': {len(query_request.query)}, 'top_k': {settings.TOP_K_RETRIEVAL}, 'top_n': {settings.TOP_N_RERANK}}}")
+            
+            # 1. 检索阶段 - 外部服务调用阶段
+            logger.info(f"[RAG_STREAM_QUERY] 正在进行文档检索 - Top-K: {settings.TOP_K_RETRIEVAL}")
             yield StreamChunk(
                 type="status",
                 content="正在检索相关文档...",
                 done=False
             )
             
+            retrieval_start = time.time()
             search_results = await self.pinecone_service.search_similar_documents(
                 query_request.query,
                 top_k=settings.TOP_K_RETRIEVAL
             )
+            retrieval_time = time.time() - retrieval_start
+            logger.info(f"[RAG_STREAM_QUERY] 文档检索完成 - 检索到 {len(search_results)} 个相关文档, 耗时: {retrieval_time:.2f}s")
             
-            # 2. 重排序阶段
+            # 2. 重排序阶段 - 外部服务调用阶段
+            logger.info(f"[RAG_STREAM_QUERY] 正在进行文档重排序 - 使用模型: {settings.RERANK_MODEL}, Top-N: {settings.TOP_N_RERANK}")
             yield StreamChunk(
                 type="status",
                 content="正在优化检索结果...",
                 done=False
             )
             
+            rerank_start = time.time()
             reranked_results = await self.llm_service.rerank_documents(
                 query_request.query,
                 search_results
             )
+            rerank_time = time.time() - rerank_start
+            logger.info(f"[RAG_STREAM_QUERY] 文档重排序完成 - 重排序后保留 {len(reranked_results)} 个文档, 耗时: {rerank_time:.2f}s")
             
             # 发送源文档信息
             yield StreamChunk(
@@ -218,10 +258,15 @@ class RAGService:
                 done=False
             )
             
-            # 3. 上下文构建
+            # 3. 上下文构建 - 业务逻辑处理阶段
+            logger.info(f"[RAG_STREAM_QUERY] 正在构建上下文")
+            context_build_start = time.time()
             context = self._build_context(reranked_results)
+            context_build_time = time.time() - context_build_start
+            logger.info(f"[RAG_STREAM_QUERY] 上下文构建完成 - 上下文长度: {len(context)} 字符, 耗时: {context_build_time:.2f}s")
             
-            # 4. 流式生成回答
+            # 4. 流式生成回答 - 外部服务调用阶段
+            logger.info(f"[RAG_STREAM_QUERY] 正在流式生成回答 - 使用模型: {settings.CHAT_MODEL}")
             yield StreamChunk(
                 type="status",
                 content="正在生成回答...",
@@ -232,13 +277,17 @@ class RAGService:
             conversation_history = self.conversation_history.get(
                 query_request.conversation_id, []
             ) if query_request.conversation_id else []
+            logger.debug(f"[RAG_STREAM_QUERY] 对话历史获取 - 历史消息数: {len(conversation_history)}")
             
+            generation_start = time.time()
             answer_buffer = ""
+            chunk_count = 0
             async for chunk in self.llm_service.stream_answer(
                 query_request.query,
                 context,
                 conversation_history
             ):
+                chunk_count += 1
                 answer_buffer += chunk
                 yield StreamChunk(
                     type="answer",
@@ -246,8 +295,12 @@ class RAGService:
                     done=False
                 )
             
-            # 更新对话历史
+            generation_time = time.time() - generation_start
+            logger.info(f"[RAG_STREAM_QUERY] 流式回答生成完成 - 总chunk数: {chunk_count}, 回答长度: {len(answer_buffer)} 字符, 耗时: {generation_time:.2f}s")
+            
+            # 更新对话历史 - 业务逻辑处理阶段
             if query_request.conversation_id:
+                logger.debug(f"[RAG_STREAM_QUERY] 更新对话历史 - 对话ID: {query_request.conversation_id}")
                 self._update_conversation_history(
                     query_request.conversation_id,
                     query_request.query,
@@ -262,10 +315,12 @@ class RAGService:
                 done=True
             )
             
-            logger.info(f"流式查询处理完成，总耗时: {processing_time:.2f}秒")
+            # 响应返回阶段 - INFO级别
+            logger.info(f"[RAG_STREAM_QUERY] 流式查询处理完成 - 总耗时: {processing_time:.2f}s (检索: {retrieval_time:.2f}s, 重排序: {rerank_time:.2f}s, 上下文构建: {context_build_time:.2f}s, 生成: {generation_time:.2f}s)")
             
         except Exception as e:
-            logger.error(f"流式查询处理失败: {str(e)}")
+            # 异常处理 - ERROR级别
+            logger.error(f"[RAG_STREAM_QUERY] 流式查询处理失败 - 错误类型: {type(e).__name__}, 错误信息: {str(e)}", exc_info=True)
             yield StreamChunk(
                 type="error",
                 content=f"处理过程中发生错误: {str(e)}",

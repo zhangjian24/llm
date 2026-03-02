@@ -4,6 +4,7 @@ Pinecone向量数据库服务
 """
 
 import uuid
+import time
 from typing import List, Dict, Any, Optional
 # 暂时注释掉，后续根据新版API调整
 # from pinecone import Pinecone, ServerlessSpec
@@ -33,43 +34,70 @@ class PineconeService:
             embeddings: 已初始化的嵌入模型
         """
         try:
-            logger.info("正在初始化Pinecone服务...")
+            # 请求接收阶段 - INFO级别
+            logger.info(f"[PINECONE_INIT] 开始初始化Pinecone服务 - 索引名称: {settings.PINECONE_INDEX_NAME}")
+            
+            # 数据验证阶段 - DEBUG级别
+            logger.debug(f"[PINECONE_INIT] 初始化参数验证 - API密钥长度: {len(settings.PINECONE_API_KEY) if settings.PINECONE_API_KEY else 0}")
             
             # 保存嵌入模型引用
             self.embeddings = embeddings
+            logger.debug(f"[PINECONE_INIT] 嵌入模型引用保存完成")
             
-            # 初始化Pinecone客户端
+            # 初始化Pinecone客户端 - 外部服务调用阶段
+            logger.info(f"[PINECONE_INIT] 正在初始化Pinecone客户端")
+            client_init_start = time.time()
             self.client = Pinecone(api_key=settings.PINECONE_API_KEY)
+            client_init_time = time.time() - client_init_start
+            logger.info(f"[PINECONE_INIT] Pinecone客户端初始化完成 - 耗时: {client_init_time:.2f}s")
             
-            # 检查索引是否存在，如果不存在则创建
+            # 检查索引是否存在，如果不存在则创建 - 外部服务调用阶段
+            logger.info(f"[PINECONE_INIT] 检查索引存在性")
             await self._ensure_index_exists()
             
-            # 获取索引
+            # 获取索引 - 外部服务调用阶段
+            logger.info(f"[PINECONE_INIT] 正在获取索引: {settings.PINECONE_INDEX_NAME}")
+            index_get_start = time.time()
             self.index = self.client.Index(settings.PINECONE_INDEX_NAME)
+            index_get_time = time.time() - index_get_start
+            logger.info(f"[PINECONE_INIT] 索引获取完成 - 耗时: {index_get_time:.2f}s")
             
-            # 初始化Langchain向量存储
+            # 初始化Langchain向量存储 - 业务逻辑处理阶段
+            logger.info(f"[PINECONE_INIT] 正在初始化Langchain向量存储")
+            vector_store_init_start = time.time()
             self.vector_store = LangchainPinecone(
                 index=self.index,
                 embedding=embeddings,
                 text_key="text"
             )
+            vector_store_init_time = time.time() - vector_store_init_start
+            logger.info(f"[PINECONE_INIT] Langchain向量存储初始化完成 - 耗时: {vector_store_init_time:.2f}s")
             
-            logger.info("Pinecone服务初始化成功")
+            # 响应返回阶段 - INFO级别
+            total_time = client_init_time + index_get_time + vector_store_init_time
+            logger.info(f"[PINECONE_INIT] Pinecone服务初始化成功 - 总耗时: {total_time:.2f}s")
             
         except Exception as e:
-            logger.error(f"Pinecone服务初始化失败: {str(e)}")
+            # 异常处理 - ERROR级别
+            logger.error(f"[PINECONE_INIT] Pinecone服务初始化失败 - 错误类型: {type(e).__name__}, 错误信息: {str(e)}", exc_info=True)
             raise
     
     async def _ensure_index_exists(self) -> None:
         """确保索引存在，不存在则创建"""
         try:
+            # 外部服务调用阶段
+            logger.info(f"[PINECONE_ENSURE_INDEX] 正在检查索引存在性 - 目标索引: {settings.PINECONE_INDEX_NAME}")
+            list_indexes_start = time.time()
             indexes = self.client.list_indexes()
             index_names = [idx['name'] for idx in indexes]
+            list_indexes_time = time.time() - list_indexes_start
+            logger.info(f"[PINECONE_ENSURE_INDEX] 索引列表获取完成 - 现有索引数: {len(index_names)}, 耗时: {list_indexes_time:.2f}s")
             
             if settings.PINECONE_INDEX_NAME not in index_names:
-                logger.info(f"创建新的Pinecone索引: {settings.PINECONE_INDEX_NAME}")
+                logger.info(f"[PINECONE_ENSURE_INDEX] 创建新的Pinecone索引: {settings.PINECONE_INDEX_NAME}")
                 
-                # 创建索引 (text-embedding-v4的维度为1536)
+                # 创建索引 (text-embedding-v4的维度为1536) - 外部服务调用阶段
+                create_index_start = time.time()
                 self.client.create_index(
                     name=settings.PINECONE_INDEX_NAME,
                     dimension=1536,
@@ -79,12 +107,14 @@ class PineconeService:
                         region="us-east-1"
                     )
                 )
-                logger.info("Pinecone索引创建成功")
+                create_index_time = time.time() - create_index_start
+                logger.info(f"[PINECONE_ENSURE_INDEX] Pinecone索引创建成功 - 维度: 1536, 距离度量: cosine, 耗时: {create_index_time:.2f}s")
             else:
-                logger.info(f"Pinecone索引已存在: {settings.PINECONE_INDEX_NAME}")
+                logger.info(f"[PINECONE_ENSURE_INDEX] Pinecone索引已存在: {settings.PINECONE_INDEX_NAME}")
                 
         except Exception as e:
-            logger.error(f"索引检查/创建失败: {str(e)}")
+            # 异常处理 - ERROR级别
+            logger.error(f"[PINECONE_ENSURE_INDEX] 索引检查/创建失败 - 错误类型: {type(e).__name__}, 错误信息: {str(e)}", exc_info=True)
             raise
     
     async def store_document_chunks(
@@ -103,12 +133,19 @@ class PineconeService:
             分块ID列表
         """
         try:
-            logger.info(f"正在存储文档分块: {metadata.filename}, 数量: {len(chunks)}")
+            # 请求接收阶段 - INFO级别
+            logger.info(f"[PINECONE_STORE_CHUNKS] 开始存储文档分块 - 文件名: {metadata.filename}, 分块数量: {len(chunks)}, 文档ID: {metadata.doc_id}")
             
-            # 生成分块ID
+            # 数据验证阶段 - DEBUG级别
+            logger.debug(f"[PINECONE_STORE_CHUNKS] 存储参数验证 - 分块详情: {{'avg_chunk_length': {sum(len(chunk) for chunk in chunks)//len(chunks) if chunks else 0}, 'total_chars': sum(len(chunk) for chunk in chunks)}}")
+            
+            # 生成分块ID - 业务逻辑处理阶段
+            logger.debug(f"[PINECONE_STORE_CHUNKS] 正在生成分块ID")
             chunk_ids = [f"{metadata.doc_id}_{i}" for i in range(len(chunks))]
+            logger.debug(f"[PINECONE_STORE_CHUNKS] 分块ID生成完成 - 数量: {len(chunk_ids)}")
             
-            # 创建Langchain文档对象
+            # 创建Langchain文档对象 - 业务逻辑处理阶段
+            logger.debug(f"[PINECONE_STORE_CHUNKS] 正在创建Langchain文档对象")
             documents = []
             for i, chunk in enumerate(chunks):
                 doc = LangchainDocument(
@@ -122,15 +159,22 @@ class PineconeService:
                     }
                 )
                 documents.append(doc)
+            logger.debug(f"[PINECONE_STORE_CHUNKS] Langchain文档对象创建完成 - 数量: {len(documents)}")
             
-            # 批量存储到向量数据库
+            # 批量存储到向量数据库 - 外部服务调用阶段
+            logger.info(f"[PINECONE_STORE_CHUNKS] 正在批量存储到向量数据库")
+            storage_start = time.time()
             self.vector_store.add_documents(documents, ids=chunk_ids)
+            storage_time = time.time() - storage_start
+            logger.info(f"[PINECONE_STORE_CHUNKS] 文档分块存储成功 - 存储分块数: {len(chunk_ids)}, 耗时: {storage_time:.2f}s")
             
-            logger.info(f"文档分块存储成功: {len(chunk_ids)} 个分块")
+            # 响应返回阶段 - INFO级别
+            logger.info(f"[PINECONE_STORE_CHUNKS] 存储流程完成 - 文档ID: {metadata.doc_id}, 总耗时: {storage_time:.2f}s")
             return chunk_ids
             
         except Exception as e:
-            logger.error(f"文档分块存储失败: {str(e)}")
+            # 异常处理 - ERROR级别
+            logger.error(f"[PINECONE_STORE_CHUNKS] 文档分块存储失败 - 文档ID: {metadata.doc_id}, 错误类型: {type(e).__name__}, 错误信息: {str(e)}", exc_info=True)
             raise
     
     async def search_similar_documents(
@@ -149,15 +193,23 @@ class PineconeService:
             搜索结果列表
         """
         try:
-            logger.info(f"正在搜索相似文档，查询: {query[:50]}...")
+            # 请求接收阶段 - INFO级别
+            logger.info(f"[PINECONE_SEARCH] 开始搜索相似文档 - 查询内容: {query[:50]}..., Top-K: {top_k}")
             
-            # 使用Langchain向量存储进行相似度搜索
+            # 数据验证阶段 - DEBUG级别
+            logger.debug(f"[PINECONE_SEARCH] 搜索参数验证 - 查询长度: {len(query)} 字符, 返回数量: {top_k}")
+            
+            # 使用Langchain向量存储进行相似度搜索 - 外部服务调用阶段
+            logger.info(f"[PINECONE_SEARCH] 正在执行向量相似度搜索")
+            search_start = time.time()
             results = self.vector_store.similarity_search_with_score(
                 query, 
                 k=top_k
             )
+            search_time = time.time() - search_start
             
-            # 转换为SearchResult格式
+            # 转换为SearchResult格式 - 业务逻辑处理阶段
+            logger.debug(f"[PINECONE_SEARCH] 正在转换搜索结果格式")
             search_results = []
             for doc, score in results:
                 result = SearchResult(
@@ -168,11 +220,20 @@ class PineconeService:
                 )
                 search_results.append(result)
             
-            logger.info(f"搜索完成，返回 {len(search_results)} 个结果")
+            logger.debug(f"[PINECONE_SEARCH] 搜索结果转换完成 - 结果数量: {len(search_results)}")
+            
+            # 响应返回阶段 - INFO级别
+            if search_results:
+                scores = [r.score for r in search_results]
+                logger.info(f"[PINECONE_SEARCH] 搜索完成 - 返回 {len(search_results)} 个结果, 最高得分: {max(scores):.3f}, 平均得分: {sum(scores)/len(scores):.3f}, 耗时: {search_time:.2f}s")
+            else:
+                logger.info(f"[PINECONE_SEARCH] 搜索完成 - 未找到相关结果, 耗时: {search_time:.2f}s")
+            
             return search_results
             
         except Exception as e:
-            logger.error(f"文档搜索失败: {str(e)}")
+            # 异常处理 - ERROR级别
+            logger.error(f"[PINECONE_SEARCH] 文档搜索失败 - 查询内容: {query[:50]}..., 错误类型: {type(e).__name__}, 错误信息: {str(e)}", exc_info=True)
             raise
     
     async def delete_document(self, doc_id: str) -> bool:
@@ -186,21 +247,31 @@ class PineconeService:
             删除是否成功
         """
         try:
-            logger.info(f"正在删除文档: {doc_id}")
+            # 请求接收阶段 - INFO级别
+            logger.info(f"[PINECONE_DELETE] 开始删除文档 - 文档ID: {doc_id}")
             
-            # 查询该文档的所有分块
+            # 数据验证阶段 - DEBUG级别
+            logger.debug(f"[PINECONE_DELETE] 删除参数验证 - 文档ID长度: {len(doc_id)}")
+            
+            # 查询该文档的所有分块 - 外部服务调用阶段
+            logger.debug(f"[PINECONE_DELETE] 准备删除过滤条件")
             query_filter = {"doc_id": {"$eq": doc_id}}
             
-            # 删除操作
+            # 删除操作 - 外部服务调用阶段
+            logger.info(f"[PINECONE_DELETE] 正在执行文档删除操作")
+            delete_start = time.time()
             # 注意：Pinecone的删除操作可能需要根据实际API调整
             # 这里假设可以通过过滤条件删除
             self.index.delete(filter=query_filter)
+            delete_time = time.time() - delete_start
             
-            logger.info(f"文档删除成功: {doc_id}")
+            # 响应返回阶段 - INFO级别
+            logger.info(f"[PINECONE_DELETE] 文档删除成功 - 文档ID: {doc_id}, 耗时: {delete_time:.2f}s")
             return True
             
         except Exception as e:
-            logger.error(f"文档删除失败: {str(e)}")
+            # 异常处理 - ERROR级别
+            logger.error(f"[PINECONE_DELETE] 文档删除失败 - 文档ID: {doc_id}, 错误类型: {type(e).__name__}, 错误信息: {str(e)}", exc_info=True)
             return False
     
     async def get_document_list(self) -> List[DocumentMetadata]:

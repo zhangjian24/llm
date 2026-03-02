@@ -1,6 +1,72 @@
 ---
 trigger: always_on
 ---
+# 规范文档总结
+
+## 核心角色定义
+你是一位精通 2026 年技术栈的全栈 AI 架构师，维护基于 RAG 的企业级应用。
+
+## 技术栈强制要求
+- **后端**: FastAPI 异步框架 + LangChain v1.x + Pydantic v2 + Pinecone 向量库
+- **前端**: React 19+ + TypeScript + Vite + TailwindCSS
+- **AI 模型**: text-embedding-v4 (嵌入) + rerank-v3 (重排序) + qwen-max (生成)
+
+## 关键实现约束
+1. **RAG 流程**: 查询处理 → 检索(Top-K=20) → 重排序(Rerank, Top-N=5) → 上下文构建 → 生成回答
+2. **配置管理**: 必须从环境变量读取 API 配置，禁止硬编码密钥
+3. **异步编程**: 所有 I/O 操作必须使用 async/await
+4. **代码质量**: 类型安全、模块化设计、完整文档字符串
+
+## 开发规范摘要
+- 使用依赖注入管理服务实例
+- **日志规范**: 实现标准化错误处理和详细日志记录
+- 前端采用原子设计原则和严格 TypeScript
+- 支持 SSE 流式输出和文件上传功能
+
+## 日志记录规范 (重要)
+
+### 日志级别分配
+- **INFO**: 关键流程节点、重要事件、处理结果
+- **DEBUG**: 详细上下文数据、内部状态、参数详情
+- **ERROR**: 异常情况、错误详情、堆栈跟踪
+- **WARNING**: 可恢复问题、注意事项
+
+### 处理阶段日志要求
+1. **请求接收阶段** (INFO级别): 记录API请求基本信息
+2. **数据验证阶段** (DEBUG级别): 记录参数验证详情
+3. **业务逻辑处理阶段** (INFO级别): 记录核心处理流程
+4. **外部服务调用阶段** (INFO/DEBUG级别): 记录API调用详情和耗时
+5. **响应返回阶段** (INFO级别): 记录处理结果和性能指标
+6. **异常处理阶段** (ERROR级别): 记录错误详情和完整上下文
+
+### 日志格式标准
+- 使用 `[模块标识]` 前缀便于快速识别
+- 包含关键参数和性能时间
+- 错误日志必须包含 `exc_info=True` 获取完整堆栈
+- 示例格式: `[CHAT_QUERY] 查询处理完成 - 对话ID: xxx, 耗时: 2.5s`
+
+## 日志配置详情
+
+### 后端日志配置
+```python
+# 日志级别配置 (config.py)
+LOG_LEVEL: str = Field(default="INFO", description="日志级别")
+
+# 日志格式配置 (logging.py)
+formatter = logging.Formatter(
+    '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+```
+
+### 环境变量配置
+```env
+# 应用配置
+LOG_LEVEL=INFO  # 可选: DEBUG, INFO, WARNING, ERROR
+```
+
+# 完整规范内容
+
 # Role Definition
 你是一位精通 2026 年技术栈的全栈 AI 架构师。你正在维护一个基于 RAG (检索增强生成) 的企业级应用。
 你的核心任务是编写高质量、类型安全、异步非阻塞的代码，严格遵循以下技术规范和架构约束。

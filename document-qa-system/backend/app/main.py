@@ -80,16 +80,34 @@ async def general_exception_handler(request, exc):
 @app.on_event("startup")
 async def startup_event():
     """应用启动事件"""
-    logger.info("文档问答系统API服务启动中...")
-    logger.info(f"运行环境: {settings.APP_ENV}")
-    logger.info(f"调试模式: {settings.DEBUG}")
-    logger.info("服务启动完成")
+    # 请求接收阶段 - INFO级别
+    logger.info(f"[APP_STARTUP] 文档问答系统API服务启动中...")
+    
+    # 数据验证阶段 - DEBUG级别
+    logger.debug(f"[APP_STARTUP] 启动配置验证 - 环境: {settings.APP_ENV}, 调试模式: {settings.DEBUG}, 主机: {settings.HOST}:{settings.PORT}")
+    
+    # 业务逻辑处理阶段 - INFO级别
+    logger.info(f"[APP_STARTUP] 系统配置信息 - 运行环境: {settings.APP_ENV}")
+    logger.info(f"[APP_STARTUP] 调试配置 - 调试模式: {settings.DEBUG}")
+    logger.info(f"[APP_STARTUP] 服务器配置 - 主机: {settings.HOST}, 端口: {settings.PORT}")
+    logger.info(f"[APP_STARTUP] 模型配置 - 嵌入模型: {settings.EMBEDDING_MODEL}, 重排序模型: {settings.RERANK_MODEL}, 聊天模型: {settings.CHAT_MODEL}")
+    logger.info(f"[APP_STARTUP] RAG参数 - 分块大小: {settings.CHUNK_SIZE}, 重叠: {settings.CHUNK_OVERLAP}, 检索Top-K: {settings.TOP_K_RETRIEVAL}, 重排序Top-N: {settings.TOP_N_RERANK}")
+    
+    # 响应返回阶段 - INFO级别
+    logger.info(f"[APP_STARTUP] 服务启动完成 - 系统准备就绪")
 
 
 @app.on_event("shutdown")
 async def shutdown_event():
     """应用关闭事件"""
-    logger.info("文档问答系统API服务正在关闭...")
+    # 请求接收阶段 - INFO级别
+    logger.info(f"[APP_SHUTDOWN] 文档问答系统API服务正在关闭...")
+    
+    # 业务逻辑处理阶段 - DEBUG级别
+    logger.debug(f"[APP_SHUTDOWN] 执行清理操作")
+    
+    # 响应返回阶段 - INFO级别
+    logger.info(f"[APP_SHUTDOWN] 服务关闭完成 - 系统已停止")
 
 
 @app.get("/")

@@ -60,6 +60,7 @@ trigger: always_on
 - **Streaming**: 聊天组件必须处理 Server-Sent Events (SSE)，实现打字机效果。
 - **Styling**: 优先使用 Tailwind 实用类。响应式设计必须包含 `md`, `lg` 断点适配。
 - **File Upload**: 实现带有进度条的文件上传组件，支持拖拽。
+- **Testing**: 前端测试必须使用 MCP 服务 playwright 工具进行端到端测试。
 
 ## 5. Environment Variables (.env)
 代码中引用的环境变量必须包含：

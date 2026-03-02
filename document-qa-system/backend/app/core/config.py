@@ -12,7 +12,10 @@ class Settings(BaseSettings):
     """
     应用配置类
     
-    从环境变量加载配置，支持.env文件
+    从环境变量加载配置，优先级顺序：
+    1. 环境变量 (操作系统)
+    2. .env.local 文件
+    3. 默认值
     """
 
     # OpenAI兼容接口配置

@@ -135,15 +135,25 @@ document-qa-system/
 
 ## 🔧 环境变量配置
 
-### 后端配置 (.env)
+### 后端配置文件
+
+系统使用 `.env.local` 文件存储环境变量配置。首次使用时，请复制 `.env.example` 模板文件：
+
+```bash
+copy .env.example .env.local
+```
+
+然后编辑 `.env.local` 文件填入实际的配置信息：
+
 ```bash
 # OpenAI兼容接口配置
-OPENAI_BASE_URL=your_openai_compatible_gateway_url
+OPENAI_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
 OPENAI_API_KEY=your_api_key_here
 
 # Pinecone配置
 PINECONE_API_KEY=your_pinecone_api_key_here
 PINECONE_INDEX_NAME=document_qa_index
+PINECONE_ENVIRONMENT=  # serverless模式可留空
 
 # 应用配置
 APP_ENV=development
@@ -157,6 +167,23 @@ CHUNK_SIZE=1000
 CHUNK_OVERLAP=200
 TOP_K_RETRIEVAL=20
 TOP_N_RERANK=5
+```
+
+### 配置文件优先级
+1. 系统环境变量（最高优先级）
+2. `.env.local` 文件
+3. `.env` 文件
+4. 代码中的默认值（最低优先级）
+
+### 验证配置
+可以使用以下脚本验证配置是否正确：
+
+```bash
+# 在backend目录下运行
+python validate_env.py
+
+# 测试API接口
+python test_api.py
 ```
 
 ## 🎯 核心功能

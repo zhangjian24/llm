@@ -34,17 +34,23 @@ echo 📥 安装后端依赖...
 pip install -r requirements.txt
 
 REM 检查环境变量文件
-if not exist ".env" (
-    echo ⚠️  请先配置 .env 文件
-    copy .env.example .env
-    echo 📝 已创建 .env 文件，请编辑填入实际的API密钥
+if not exist ".env.local" (
+    echo ⚠️  请先配置 .env.local 文件
+    if exist ".env.example" (
+        copy .env.example .env.local
+        echo 📝 已创建 .env.local 文件，请编辑填入实际的API密钥
+    ) else (
+        echo ❌ 找不到 .env.example 模板文件
+        pause
+        exit /b 1
+    )
     pause
     exit /b 1
 )
 
 REM 启动后端服务
 echo 🏃 后端服务启动中...
-start "后端服务" /min cmd /c "uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 & pause"
+start "后端服务" /min cmd /c "cd /d %CD% && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 & pause"
 
 cd ..
 

@@ -127,6 +127,7 @@ class RAGService:
             retrieval_start = time.time()
             search_results = await self.pinecone_service.search_similar_documents(
                 query_request.query,
+                self.llm_service.embedding_model,
                 top_k=settings.TOP_K_RETRIEVAL
             )
             retrieval_time = time.time() - retrieval_start
@@ -230,6 +231,7 @@ class RAGService:
             retrieval_start = time.time()
             search_results = await self.pinecone_service.search_similar_documents(
                 query_request.query,
+                self.llm_service.embedding_model,
                 top_k=settings.TOP_K_RETRIEVAL
             )
             retrieval_time = time.time() - retrieval_start

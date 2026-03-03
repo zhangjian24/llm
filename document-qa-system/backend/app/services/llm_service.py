@@ -5,6 +5,7 @@ LLM服务封装
 
 import json
 import time
+import asyncio
 from typing import List, Dict, Any, Optional, AsyncGenerator
 import httpx
 from openai import AsyncOpenAI
@@ -98,29 +99,49 @@ class LLMService:
             嵌入向量列表
         """
         try:
-            # 请求接收阶段 - INFO级别
-            logger.info(f"[LLM_EMBEDDING] 开始生成文本嵌入向量 - 文本数量: {len(texts)}, 使用模型: {settings.EMBEDDING_MODEL}")
+            # 请求接收阶段 - INFO 级别
+            logger.info(f"[LLM_EMBEDDING] 开始生成文本嵌入向量 - 文本数量：{len(texts)}, 使用模型：{settings.EMBEDDING_MODEL}")
             
-            # 数据验证阶段 - DEBUG级别
+            # 数据验证阶段 - DEBUG 级别
             if not self.embedding_model:
                 logger.error(f"[LLM_EMBEDDING] 嵌入模型未初始化")
                 raise ValueError("嵌入模型未初始化")
             
-            logger.debug(f"[LLM_EMBEDDING] 输入文本验证 - 平均长度: {sum(len(text) for text in texts)//len(texts) if texts else 0} 字符, 总字符数: {sum(len(text) for text in texts)}")
+            logger.debug(f"[LLM_EMBEDDING] 输入文本验证 - 平均长度：{sum(len(text) for text in texts)//len(texts) if texts else 0} 字符，总字符数：{sum(len(text) for text in texts)}")
             
-            # 外部服务调用阶段
-            logger.info(f"[LLM_EMBEDDING] 正在调用嵌入模型API")
+            # 外部服务调用阶段 - 带重试机制
+            logger.info(f"[LLM_EMBEDDING] 正在调用嵌入模型 API")
             embedding_start = time.time()
-            embeddings = await self.embedding_model.aembed_documents(texts)
-            embedding_time = time.time() - embedding_start
             
-            # 响应返回阶段 - INFO级别
-            logger.info(f"[LLM_EMBEDDING] 嵌入向量生成完成 - 向量数量: {len(embeddings)}, 向量维度: {len(embeddings[0]) if embeddings else 0}, 耗时: {embedding_time:.2f}s")
-            return embeddings
+            # 实现重试逻辑，处理临时错误
+            max_retries = 3
+            retry_delay = 2.0  # 秒
+            last_exception = None
+            
+            for attempt in range(max_retries):
+                try:
+                    embeddings = await self.embedding_model.aembed_documents(texts)
+                    embedding_time = time.time() - embedding_start
+                    
+                    # 响应返回阶段 - INFO 级别
+                    logger.info(f"[LLM_EMBEDDING] 嵌入向量生成完成 - 向量数量：{len(embeddings)}, 向量维度：{len(embeddings[0]) if embeddings else 0}, 耗时：{embedding_time:.2f}s")
+                    return embeddings
+                    
+                except Exception as e:
+                    last_exception = e
+                    if attempt < max_retries - 1:
+                        logger.warning(f"[LLM_EMBEDDING] 第 {attempt + 1} 次尝试失败，{retry_delay}秒后重试 - 错误：{str(e)}")
+                        await asyncio.sleep(retry_delay)
+                        retry_delay *= 2  # 指数退避
+                    else:
+                        raise
+            
+            # 如果所有重试都失败
+            raise last_exception
             
         except Exception as e:
-            # 异常处理 - ERROR级别
-            logger.error(f"[LLM_EMBEDDING] 嵌入向量生成失败 - 文本数量: {len(texts)}, 错误类型: {type(e).__name__}, 错误信息: {str(e)}", exc_info=True)
+            # 异常处理 - ERROR 级别
+            logger.error(f"[LLM_EMBEDDING] 嵌入向量生成失败 - 文本数量：{len(texts)}, 错误类型：{type(e).__name__}, 错误信息：{str(e)}", exc_info=True)
             raise
     
     async def rerank_documents(

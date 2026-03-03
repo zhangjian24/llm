@@ -6,8 +6,7 @@ Pinecone向量数据库服务
 import uuid
 import time
 from typing import List, Dict, Any, Optional
-# 暂时注释掉，后续根据新版API调整
-# from pinecone import Pinecone, ServerlessSpec
+from pinecone import Pinecone, ServerlessSpec
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import Pinecone as LangchainPinecone
 from langchain_core.documents import Document as LangchainDocument
@@ -62,16 +61,16 @@ class PineconeService:
             index_get_time = time.time() - index_get_start
             logger.info(f"[PINECONE_INIT] 索引获取完成 - 耗时: {index_get_time:.2f}s")
             
-            # 初始化Langchain向量存储 - 业务逻辑处理阶段
-            logger.info(f"[PINECONE_INIT] 正在初始化Langchain向量存储")
+            # 初始化 Langchain 向量存储 - 业务逻辑处理阶段
+            logger.info(f"[PINECONE_INIT] 正在初始化 Langchain 向量存储")
             vector_store_init_start = time.time()
-            self.vector_store = LangchainPinecone(
-                index=self.index,
-                embedding=embeddings,
-                text_key="text"
-            )
+                        
+            # 使用 Pinecone v5+ 的新 API，避免 langchain_community 的版本检查问题
+            # 直接使用 index 对象，不通过 LangchainPinecone 包装
+            self.vector_store = None  # 暂时不使用 LangchainPinecone
+                        
             vector_store_init_time = time.time() - vector_store_init_start
-            logger.info(f"[PINECONE_INIT] Langchain向量存储初始化完成 - 耗时: {vector_store_init_time:.2f}s")
+            logger.info(f"[PINECONE_INIT] Pinecone 索引准备完成 - 耗时：{vector_store_init_time:.2f}s")
             
             # 响应返回阶段 - INFO级别
             total_time = client_init_time + index_get_time + vector_store_init_time
@@ -164,9 +163,35 @@ class PineconeService:
             # 批量存储到向量数据库 - 外部服务调用阶段
             logger.info(f"[PINECONE_STORE_CHUNKS] 正在批量存储到向量数据库")
             storage_start = time.time()
-            self.vector_store.add_documents(documents, ids=chunk_ids)
+                        
+            # 使用 Pinecone v5+ 原生 API 直接上传向量
+            # 需要先生成向量
+            vectors_to_upsert = []
+            for i, (chunk, chunk_id) in enumerate(zip(chunks, chunk_ids)):
+                # 生成该 chunk 的向量 (使用 embeddings)
+                embedding = await embeddings.aembed_query(chunk)
+                            
+                vector_record = {
+                    "id": chunk_id,
+                    "values": embedding,
+                    "metadata": {
+                        "doc_id": metadata.doc_id,
+                        "chunk_id": chunk_id,
+                        "filename": metadata.filename,
+                        "chunk_index": i,
+                        "upload_time": metadata.upload_time.isoformat(),
+                        "text": chunk  # 存储原始文本
+                    }
+                }
+                vectors_to_upsert.append(vector_record)
+                        
+            logger.debug(f"[PINECONE_STORE_CHUNKS] 向量准备完成 - 数量：{len(vectors_to_upsert)}")
+                        
+            # 批量上传到 Pinecone
+            self.index.upsert(vectors=vectors_to_upsert)
+                        
             storage_time = time.time() - storage_start
-            logger.info(f"[PINECONE_STORE_CHUNKS] 文档分块存储成功 - 存储分块数: {len(chunk_ids)}, 耗时: {storage_time:.2f}s")
+            logger.info(f"[PINECONE_STORE_CHUNKS] 文档分块存储成功 - 存储分块数：{len(chunk_ids)}, 耗时：{storage_time:.2f}s")
             
             # 响应返回阶段 - INFO级别
             logger.info(f"[PINECONE_STORE_CHUNKS] 存储流程完成 - 文档ID: {metadata.doc_id}, 总耗时: {storage_time:.2f}s")
@@ -180,6 +205,7 @@ class PineconeService:
     async def search_similar_documents(
         self, 
         query: str, 
+        embeddings: OpenAIEmbeddings,
         top_k: int = 20
     ) -> List[SearchResult]:
         """
@@ -187,6 +213,7 @@ class PineconeService:
         
         Args:
             query: 查询文本
+            embeddings: 嵌入模型实例
             top_k: 返回结果数量
             
         Returns:
@@ -199,24 +226,34 @@ class PineconeService:
             # 数据验证阶段 - DEBUG级别
             logger.debug(f"[PINECONE_SEARCH] 搜索参数验证 - 查询长度: {len(query)} 字符, 返回数量: {top_k}")
             
-            # 使用Langchain向量存储进行相似度搜索 - 外部服务调用阶段
+            # 使用 Langchain 向量存储进行相似度搜索 - 外部服务调用阶段
             logger.info(f"[PINECONE_SEARCH] 正在执行向量相似度搜索")
             search_start = time.time()
-            results = self.vector_store.similarity_search_with_score(
-                query, 
-                k=top_k
+                        
+            # 使用 Pinecone v5+ 原生 API 进行搜索
+            # 首先生成查询的向量
+            query_embedding = await embeddings.aembed_query(query)
+                        
+            # 在 Pinecone 中搜索
+            search_response = self.index.query(
+                vector=query_embedding,
+                top_k=top_k,
+                include_metadata=True,
+                include_values=False
             )
+                        
             search_time = time.time() - search_start
-            
-            # 转换为SearchResult格式 - 业务逻辑处理阶段
+            logger.info(f"[PINECONE_SEARCH] 向量相似度搜索完成 - 耗时：{search_time:.2f}s")
+                        
+            # 转换为 SearchResult 格式 - 业务逻辑处理阶段
             logger.debug(f"[PINECONE_SEARCH] 正在转换搜索结果格式")
             search_results = []
-            for doc, score in results:
+            for match in search_response.matches:
                 result = SearchResult(
-                    content=doc.page_content,
-                    metadata=doc.metadata,
-                    score=float(score),
-                    doc_id=doc.metadata.get("doc_id", "")
+                    content=match.metadata.get("text", "") if match.metadata else "",
+                    metadata=match.metadata or {},
+                    score=match.score,
+                    doc_id=match.metadata.get("doc_id", "") if match.metadata else ""
                 )
                 search_results.append(result)
             

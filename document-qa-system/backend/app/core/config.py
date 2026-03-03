@@ -86,7 +86,7 @@ class Settings(BaseSettings):
 
     # 模型配置
     EMBEDDING_MODEL: str = Field(
-        default="text-embedding-v4",
+        default="qwen3-embeddings",
         description="嵌入模型名称"
     )
     RERANK_MODEL: str = Field(

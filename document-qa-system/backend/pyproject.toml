@@ -1,0 +1,19 @@
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = [
+    "-ra",
+    "-q",
+    "--strict-markers",
+    "--strict-config",
+    "--cov=app",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+]
+testpaths = [
+    "tests",
+]
+asyncio_mode = "auto"
+markers = [
+    "asyncio: mark test as async",
+    "slow: marks tests as slow",
+]

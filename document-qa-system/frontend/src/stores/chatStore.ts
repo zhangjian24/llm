@@ -1,35 +1,45 @@
 import { create } from 'zustand';
-import { ChatMessage, QueryRequest, QueryResponse } from '../types';
+import type { Message } from '../types';
 
 interface ChatState {
-  messages: ChatMessage[];
-  conversationId: string | null;
-  isStreaming: boolean;
-  addMessage: (message: ChatMessage) => void;
-  setMessages: (messages: ChatMessage[]) => void;
+  messages: Message[];
+  currentConversationId: string | null;
+  isLoading: boolean;
+  error: string | null;
+  
+  // Actions
+  addMessage: (message: Message) => void;
+  setCurrentConversation: (id: string | null) => void;
+  setLoading: (loading: boolean) => void;
+  setError: (error: string | null) => void;
   clearMessages: () => void;
-  setConversationId: (id: string) => void;
-  setIsStreaming: (streaming: boolean) => void;
 }
 
-export const useChatStore = create<ChatState>((set, get) => ({
+export const useChatStore = create<ChatState>((set) => ({
   messages: [],
-  conversationId: null,
-  isStreaming: false,
-  
-  addMessage: (message) => set((state) => ({
-    messages: [...state.messages, message]
-  })),
-  
-  setMessages: (messages) => set({ messages }),
-  
-  clearMessages: () => set({ 
-    messages: [], 
-    conversationId: null,
-    isStreaming: false 
-  }),
-  
-  setConversationId: (id) => set({ conversationId: id }),
-  
-  setIsStreaming: (streaming) => set({ isStreaming: streaming })
+  currentConversationId: null,
+  isLoading: false,
+  error: null,
+
+  addMessage: (message) =>
+    set((state) => ({
+      messages: [...state.messages, message],
+    })),
+
+  setCurrentConversation: (id) =>
+    set({ currentConversationId: id }),
+
+  setLoading: (loading) =>
+    set({ isLoading: loading }),
+
+  setError: (error) =>
+    set({ error }),
+
+  clearMessages: () =>
+    set({ 
+      messages: [], 
+      currentConversationId: null, 
+      error: null,
+      isLoading: false 
+    }),
 }));

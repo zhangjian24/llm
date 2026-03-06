@@ -1,85 +1,78 @@
-/**
- * 前端类型定义
- */
-
-export interface DocumentMetadata {
-  doc_id: string;
+// 文档相关类型
+export interface Document {
+  id: string;
   filename: string;
   file_size: number;
-  content_type: string;
-  upload_time: string;
-  chunk_count: number;
-}
-
-export interface SearchResult {
-  content: string;
-  metadata: Record<string, any>;
-  score: number;
-  doc_id: string;
-}
-
-export interface ChatMessage {
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: string;
-  sources?: SearchResult[];
-}
-
-export interface QueryRequest {
-  query: string;
-  conversation_id?: string;
-  stream?: boolean;
-}
-
-export interface QueryResponse {
-  answer: string;
-  sources: SearchResult[];
-  conversation_id: string;
-  processing_time: number;
-}
-
-export interface StreamChunk {
-  type: 'answer' | 'sources' | 'status' | 'error' | 'end';
-  content?: string;
-  sources?: SearchResult[];
-  done: boolean;
+  mime_type: string;
+  status: 'processing' | 'ready' | 'failed';
+  chunks_count?: number;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface DocumentUploadResponse {
-  doc_id: string;
-  filename: string;
-  status: string;
+  code: number;
   message: string;
+  data: Document;
 }
 
 export interface DocumentListResponse {
-  documents: DocumentMetadata[];
-  total_count: number;
+  code: number;
+  message: string;
+  data: {
+    total: number;
+    items: Document[];
+    page: number;
+    limit: number;
+    total_pages: number;
+  };
 }
 
-export interface HealthCheckResponse {
-  status: string;
-  timestamp: string;
-  version: string;
-  services: Record<string, string>;
+// 对话相关类型
+export interface Message {
+  role: 'user' | 'assistant';
+  content: string;
+  sources?: Array<{
+    chunk_id: string;
+    relevance_score: number;
+  }>;
+  created_at?: string;
 }
 
-// 组件Props类型
-export interface ChatBoxProps {
-  className?: string;
+export interface Conversation {
+  id: string;
+  title: string;
+  last_message?: string;
+  turns: number;
+  updated_at: string;
 }
 
-export interface MessageBubbleProps {
-  message: ChatMessage;
-  isStreaming?: boolean;
+export interface ChatQuery {
+  query: string;
+  top_k?: number;
+  stream?: boolean;
+  conversation_id?: string;
 }
 
-export interface UploadZoneProps {
-  onUploadComplete?: (response: DocumentUploadResponse) => void;
+export interface ChatTokenResponse {
+  token?: string;
+  done?: boolean;
+  conversation_id?: string;
+  error?: string;
 }
 
-export interface SourcesDisplayProps {
-  sources: SearchResult[];
-  isOpen: boolean;
-  onClose: () => void;
+export interface ChatResponse {
+  code: number;
+  message: string;
+  data: {
+    answer: string;
+    conversation_id: string;
+  };
+}
+
+// 通用类型
+export interface APIResponse<T> {
+  code: number;
+  message: string;
+  data: T;
 }

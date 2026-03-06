@@ -1,33 +1,8 @@
 """
-数据模型模块初始化
+数据模型模块
 """
+from .document import Document
+from .chunk import Chunk
+from .conversation import Conversation
 
-from .schemas import (
-    DocumentMetadata,
-    DocumentUploadRequest,
-    DocumentUploadResponse,
-    DocumentListResponse,
-    SearchResult,
-    ChatMessage,
-    QueryRequest,
-    QueryResponse,
-    StreamChunk,
-    HealthCheckResponse,
-    ErrorResponse,
-    ProcessedDocument
-)
-
-__all__ = [
-    "DocumentMetadata",
-    "DocumentUploadRequest", 
-    "DocumentUploadResponse",
-    "DocumentListResponse",
-    "SearchResult",
-    "ChatMessage",
-    "QueryRequest",
-    "QueryResponse",
-    "StreamChunk",
-    "HealthCheckResponse",
-    "ErrorResponse",
-    "ProcessedDocument"
-]
+__all__ = ["Document", "Chunk", "Conversation"]

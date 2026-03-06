@@ -1,6 +1,5 @@
 """
-文档问答系统后端包
+RAG 文档问答系统 - 后端应用
 """
-
 __version__ = "1.0.0"
-__author__ = "Document QA Team"
+__author__ = "AI Developer"

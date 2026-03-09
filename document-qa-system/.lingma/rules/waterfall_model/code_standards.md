@@ -874,7 +874,147 @@ pytest --cov=app --cov-report=html --cov-report=term-missing
 
 ---
 
-## 5. 构建与运行
+## 8. 配置管理规范
+
+### 环境变量文件格式（.env）
+
+#### Pydantic Settings V2 兼容性要求
+
+**重要**：Pydantic Settings V2 会自动解析复杂类型为 JSON，必须使用正确的格式。
+
+```bash
+# ==================== 基础类型 ====================
+# 字符串 - 直接书写
+APP_NAME=RAG Document QA System
+DEBUG=True
+APP_ENV=development
+SECRET_KEY=your-secret-key-here
+
+# 数字 - 直接书写
+PORT=8000
+MAX_FILE_SIZE=52428800
+CHUNK_SIZE=800
+
+# ==================== 复杂类型 ====================
+# ⚠️ 列表/数组 - 必须使用 JSON 格式
+ALLOWED_MIME_TYPES=["application/pdf","text/plain","application/vnd.openxmlformats-officedocument.wordprocessingml.document"]
+CORS_ORIGINS=["http://localhost:5173","http://localhost:3000"]
+ENABLED_FEATURES=["feature1","feature2","feature3"]
+
+# ⚠️ 字典/对象 - 必须使用 JSON 格式
+LOG_CONFIG={"level":"INFO","format":"json"}
+DATABASE_POOL_CONFIG={"size":20,"overflow":40}
+
+# ==================== 特殊字符处理 ====================
+# URL - 包含特殊字符时建议使用引号
+DATABASE_URL="postgresql+asyncpg://user:pass@host:5432/db"
+```
+
+#### 常见错误示例
+
+```bash
+# ❌ 错误：逗号分隔字符串（会被尝试 JSON 解析但失败）
+ALLOWED_MIME_TYPES=application/pdf,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document
+
+# ✅ 正确：JSON 数组格式
+ALLOWED_MIME_TYPES=["application/pdf","text/plain","application/vnd.openxmlformats-officedocument.wordprocessingml.document"]
+```
+
+#### 配置字段完整性
+
+确保 `.env.local` 中的所有字段都在 `Settings` 类中有对应定义：
+
+```python
+# app/core/config.py
+class Settings(BaseSettings):
+    # ✅ 所有 .env.local 中的字段都必须在这里定义
+    APP_NAME: str = "RAG Document QA System"
+    APP_ENV: str = "production"
+    DEBUG: bool = False
+    
+    DATABASE_URL: str
+    PINECONE_API_KEY: str
+    DASHSCOPE_API_KEY: str
+    
+    ALLOWED_MIME_TYPES: Set[str] = {"application/pdf", "text/plain"}
+    MAX_FILE_SIZE: int = 52428800
+    UPLOAD_DIR: str = "./uploads"
+    
+    HOST: str = "0.0.0.0"
+    PORT: int = 8000
+    FRONTEND_URL: str = "http://localhost:5173"
+    
+    LOG_LEVEL: str = "INFO"
+    LOG_FORMAT: str = "json"
+    
+    class Config:
+        env_file = ".env.local"
+        case_sensitive = True
+```
+
+### 配置验证工具
+
+创建配置验证脚本进行快速测试：
+
+```python
+# test_config_fix.py
+import json
+from dotenv import load_dotenv
+import os
+
+# 加载环境变量
+load_dotenv(".env.local")
+
+# 测试 ALLOWED_MIME_TYPES
+mime_types_raw = os.getenv("ALLOWED_MIME_TYPES")
+
+try:
+    mime_types_parsed = json.loads(mime_types_raw)
+    print(f"✅ JSON 解析成功：{mime_types_parsed}")
+except json.JSONDecodeError as e:
+    print(f"❌ JSON 解析失败：{e}")
+    print(f"💡 正确格式：ALLOWED_MIME_TYPES=[\"type1\",\"type2\"]")
+
+# 测试 Pydantic Settings
+try:
+    from app.core.config import get_settings
+    settings = get_settings()
+    print(f"✅ Pydantic Settings 加载成功！")
+except Exception as e:
+    print(f"❌ Pydantic Settings 加载失败：{e}")
+```
+
+### 配置文件管理最佳实践
+
+1. **版本控制**
+   - ✅ `.env.example` - 提交到 Git，作为配置模板
+   - ✅ `.env.local` - 添加到 `.gitignore`，本地开发使用
+   - ✅ `.env.production` - 通过 CI/CD 或部署工具管理
+
+2. **敏感信息保护**
+   ```bash
+   # .gitignore
+   .env.local
+   .env.production
+   *.pem
+   *.key
+   ```
+
+3. **配置分层**
+   ```bash
+   # 基础配置（所有环境共有）
+   cp .env.example .env
+   
+   # 开发环境覆盖
+   cp .env.local .env.override
+   
+   # 生产环境使用独立配置
+   export ENV_FILE=.env.production
+   ```
+
+---
+
+## 9. 构建与运行
 
 ### 环境要求
 
@@ -953,7 +1093,7 @@ docker-compose down -v
 
 ---
 
-## 6. 性能优化指南
+## 10. 性能优化指南
 
 ### 异步 I/O 最佳实践
 
@@ -1026,7 +1166,7 @@ async def get_cached_embedding(text: str):
 
 ---
 
-## 7. 安全规范
+## 11. 安全规范
 
 ### 输入验证
 
@@ -1071,6 +1211,7 @@ async def chat_endpoint(request: Request, query: ChatQuery):
 
 ---
 
-**版本**: v1.0  
-**更新日期**: 2026-03-04  
-**审批人**: [技术负责人]
+**版本**: v1.1  
+**更新日期**: 2026-03-09  
+**审批人**: [技术负责人]  
+**更新说明**: 新增第 8 章配置管理规范（Pydantic Settings V2 兼容性要求）

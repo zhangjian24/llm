@@ -1,7 +1,7 @@
 """
 文档管理 API 路由
 """
-from fastapi import APIRouter, Depends, Query, HTTPException
+from fastapi import APIRouter, Depends, Query, HTTPException, File
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 from uuid import UUID
@@ -19,16 +19,16 @@ router = APIRouter()
 
 
 # 依赖注入
-def get_document_service(session: AsyncSession) -> DocumentService:
+def get_document_service(session: AsyncSession = Depends(get_db_session)) -> DocumentService:
     """获取 DocumentService 实例"""
     repo = DocumentRepository(session)
     embedding_svc = EmbeddingService()
     return DocumentService(repo, embedding_svc)
 
 
-@router.post("/upload", response_model=SuccessResponse[DocumentDTO])
+@router.post("/upload")
 async def upload_document(
-    file: bytes,  # 实际应从 File() 获取，这里简化
+    file: bytes = File(..., description="上传的文件"),
     mime_type: str = Query(..., description="文件 MIME 类型"),
     filename: str = Query(..., description="文件名"),
     service: DocumentService = Depends(get_document_service)

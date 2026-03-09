@@ -15,7 +15,7 @@ class ChatQueryDTO(BaseModel):
     conversation_id: Optional[UUID] = Field(None, description="对话 ID")
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "query": "如何申请年假？",
                 "top_k": 5,
@@ -40,7 +40,7 @@ class ChatResponseDTO(BaseModel):
     sources: Optional[List[Dict[str, Any]]] = None  # 引用来源
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "answer": "根据公司规定，申请年假需要...",
                 "conversation_id": "123e4567-e89b-12d3-a456-426614174000",

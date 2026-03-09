@@ -2,7 +2,7 @@
 对话聊天 API 路由
 支持 SSE 流式响应
 """
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
@@ -24,7 +24,7 @@ logger = structlog.get_logger()
 router = APIRouter()
 
 
-def get_chat_service(session: AsyncSession) -> ChatService:
+def get_chat_service(session: AsyncSession = Depends(get_db_session)) -> ChatService:
     """获取 ChatService 实例"""
     repo = ConversationRepository(session)
     return ChatService(repo)

@@ -15,8 +15,8 @@ class DocumentDTO(BaseModel):
     mime_type: str
     status: str
     chunks_count: Optional[int] = None
-    created_at: datetime
-    updated_at: datetime
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
     
     class Config:
         from_attributes = True
@@ -28,7 +28,7 @@ class DocumentCreateDTO(BaseModel):
     tags: list[str] = Field(default_factory=list)
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "title": "员工手册",
                 "tags": ["HR", "制度"]

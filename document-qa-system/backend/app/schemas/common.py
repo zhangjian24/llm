@@ -21,3 +21,12 @@ class SuccessResponse(BaseModel, Generic[T]):
     code: int = 0
     message: str = "success"
     data: T
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "code": 0,
+                "message": "success",
+                "data": {}
+            }
+        }

@@ -89,11 +89,25 @@ class DocumentService:
         if file_size > max_size:
             raise FileTooLargeError(file_size, max_size)
         
-        # 2. 验证文件类型
-        if not ParserRegistry.is_supported(mime_type):
+        # 2. 验证文件类型：从配置文件读取支持的 MIME 类型
+        if mime_type not in settings.ALLOWED_MIME_TYPES:
+            logger.warning(
+                "unsupported_mime_type",
+                mime_type=mime_type,
+                allowed_types=settings.ALLOWED_MIME_TYPES
+            )
             raise UnsupportedFileTypeError(mime_type)
         
-        # 3. 保存文件到本地
+        # 3. 额外验证：确保解析器已注册（双重检查）
+        if not ParserRegistry.is_supported(mime_type):
+            logger.error(
+                "parser_not_registered",
+                mime_type=mime_type,
+                suggestion="Check if parsers are properly registered in app/parsers/__init__.py"
+            )
+            raise UnsupportedFileTypeError(mime_type)
+        
+        # 4. 保存文件到本地
         file_path = await self._save_file(file_content, filename, mime_type)
         
         # 4. 创建文档记录

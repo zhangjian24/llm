@@ -33,9 +33,8 @@ class PineconeService:
     def __init__(self):
         """初始化 Pinecone 客户端（延迟导入）"""
         self.api_key = settings.PINECONE_API_KEY
-        self.host = settings.PINECONE_HOST
         self.index_name = settings.PINECONE_INDEX_NAME
-        self.dimension = 1536  # text-embedding-v4 维度
+        self.dimension = 1024  # text-embedding-v4 实际输出维度为 1024
         
         # 延迟导入 Pinecone SDK v8
         try:
@@ -77,12 +76,13 @@ class PineconeService:
         """
         如果 Index 不存在则创建
         
-        SDK v8 新 API:
-        - pc.has_index(): 检查索引是否存在
-        - pc.create_index_for_model(): 为特定模型创建索引（自动配置维度）
+        SDK v8+ API:
+        - pc.list_indexes(): 列出所有索引
+        - pc.create_index(): 创建新索引
+        - pc.delete_index(): 删除索引
         """
         try:
-            # 检查索引是否存在 (v8 API)
+            # 检查索引是否存在 (v8+ API)
             existing_indexes = self.pc.list_indexes()
             index_names = [idx.name for idx in existing_indexes]
             
@@ -94,17 +94,30 @@ class PineconeService:
                     sdk_version="v8+"
                 )
                 
-                # 使用 v8 API 创建索引
+                # 使用 v8+ API 创建索引
                 self.pc.create_index(
                     name=self.index_name,
                     dimension=self.dimension,
                     metric="cosine",
                     spec=self.ServerlessSpec(
-                        cloud=self.CloudProvider.AWS,
-                        region=self.AwsRegion.US_EAST_1
+                        cloud="aws",
+                        region="us-east-1"
                     ),
                     vector_type=self.VectorType.DENSE
                 )
+                
+                # 等待索引准备就绪
+                import time
+                while True:
+                    index_info = self.pc.describe_index(self.index_name)
+                    if index_info.status.ready:
+                        break
+                    logger.info(
+                        "waiting_for_index_ready",
+                        index_name=self.index_name,
+                        status=index_info.status.state
+                    )
+                    await asyncio.sleep(2)
                 
                 logger.info(
                     "pinecone_index_created",
@@ -232,6 +245,44 @@ class PineconeService:
                 exc_info=True
             )
             raise RetrievalException(f"向量检索失败：{str(e)}")
+    
+    async def delete_index(self):
+        """
+        删除 Index
+        
+        SDK v8+ API:
+        - pc.delete_index(): 删除指定索引
+        """
+        try:
+            existing_indexes = self.pc.list_indexes()
+            index_names = [idx.name for idx in existing_indexes]
+            
+            if self.index_name in index_names:
+                logger.info(
+                    "deleting_pinecone_index",
+                    index_name=self.index_name
+                )
+                
+                self.pc.delete_index(self.index_name)
+                
+                logger.info(
+                    "pinecone_index_deleted",
+                    index_name=self.index_name
+                )
+            else:
+                logger.warning(
+                    "pinecone_index_not_found",
+                    index_name=self.index_name
+                )
+                
+        except Exception as e:
+            logger.error(
+                "pinecone_index_deletion_failed",
+                index_name=self.index_name,
+                error=str(e),
+                sdk_version="v8+"
+            )
+            raise RetrievalException(f"删除 Pinecone Index 失败：{str(e)}")
     
     async def delete_vectors(
         self,

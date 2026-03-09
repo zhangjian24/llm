@@ -21,8 +21,8 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql+asyncpg://localhost/rag_qa"
     
     # Pinecone 配置
+    # 注意：Pinecone SDK v8+ 不再需要 PINECONE_HOST，自动根据 index_name 解析 endpoint
     PINECONE_API_KEY: str = ""
-    PINECONE_HOST: str = ""
     PINECONE_INDEX_NAME: str = "rag-documents"
     
     # 阿里云百炼配置

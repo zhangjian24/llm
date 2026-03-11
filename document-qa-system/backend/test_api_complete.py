@@ -464,11 +464,11 @@ async def run_all_tests():
     print("=" * 80)
     
     passed = sum(1 for r in results if r.passed)
-    failed = sum(1 for r in results if not r.passed and r.error)
+    failed = sum(1 for r in results if not r.passed and r.error and "Pinecone" not in str(r.error))
     blocked = sum(1 for r in results if not r.passed and "Pinecone" in str(r.error))
     
     for i, result in enumerate(results, 1):
-        status_icon = "✅" if result.passed else ("⚠️" if "Pinecone" in str(result.error) else "❌")
+        status_icon = "[PASS]" if result.passed else ("[BLOCKED]" if "Pinecone" in str(result.error) else "[FAIL]")
         print(f"\n{i}. {result.name}")
         print(f"   状态：{status_icon} {'通过' if result.passed else '失败'}")
         if result.error:
@@ -485,9 +485,9 @@ async def run_all_tests():
     print("测试统计")
     print("=" * 80)
     print(f"总测试数：{len(results)}")
-    print(f"✅ 通过：{passed}")
-    print(f"❌ 失败：{failed}")
-    print(f"⚠️  阻塞（Pinecone 配置）: {blocked}")
+    print(f"[PASS] 通过：{passed}")
+    print(f"[FAIL] 失败：{failed}")
+    print(f"[BLOCKED] 阻塞（Pinecone 配置）: {blocked}")
     print(f"通过率：{passed/len(results)*100:.1f}%")
     
     # SRS 符合性评估
@@ -510,26 +510,26 @@ async def run_all_tests():
     
     print("\n功能需求:")
     for fr, passed in fr_results.items():
-        icon = "✅" if passed else "❌"
+        icon = "[PASS]" if passed else "[FAIL]"
         print(f"  {icon} {fr}: {'符合' if passed else '不符合'}")
     
     print("\n非功能需求:")
     for nfr, passed in nfr_results.items():
-        icon = "✅" if passed else "❌"
+        icon = "[PASS]" if passed else "[FAIL]"
         print(f"  {icon} {nfr}: {'符合' if passed else '不符合'}")
     
     # 结论
     print("\n" + "=" * 80)
     overall_pass_rate = sum(fr_results.values()) / len(fr_results) * 100
     if overall_pass_rate >= 80:
-        print("✅ 测试结论：通过（满足 SRS 核心需求）")
+        print("[RESULT] 测试结论：通过（满足 SRS 核心需求）")
     elif overall_pass_rate >= 60:
-        print("⚠️  测试结论：有条件通过（核心功能可用，需完善配置）")
+        print("[RESULT] 测试结论：有条件通过（核心功能可用，需完善配置）")
     else:
-        print("❌ 测试结论：不通过（需修复关键问题）")
+        print("[RESULT] 测试结论：不通过（需修复关键问题）")
     
     if blocked > 0:
-        print(f"\n💡 提示：{blocked} 个测试因 Pinecone 配置问题阻塞，配置后即可启用完整 RAG 功能。")
+        print(f"\n[BLOCKED] 提示：{blocked} 个测试因 Pinecone 配置问题阻塞，配置后即可启用完整 RAG 功能。")
     
     print("=" * 80)
     

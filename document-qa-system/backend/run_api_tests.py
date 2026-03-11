@@ -26,14 +26,14 @@ async def run_tests():
             duration = time.time() - start
             data = response.json()
             if response.status_code == 200 and data.get("status") == "healthy":
-                print(f"  ✓ 通过 (HTTP {response.status_code}, 耗时：{duration:.3f}s)")
+                print(f"  [PASS] 通过 (HTTP {response.status_code}, 耗时：{duration:.3f}s)")
                 print(f"  响应：{data}")
                 results.append(("健康检查", True, None))
             else:
-                print(f"  ✗ 失败：{data}")
+                print(f"  [FAIL] 失败：{data}")
                 results.append(("健康检查", False, str(data)))
         except Exception as e:
-            print(f"  ✗ 异常：{e}")
+            print(f"  [ERROR] 异常：{e}")
             results.append(("健康检查", False, str(e)))
         
         # 测试 2: 根路径
@@ -44,14 +44,14 @@ async def run_tests():
             duration = time.time() - start
             data = response.json()
             if response.status_code == 200 and "app" in data:
-                print(f"  ✓ 通过 (HTTP {response.status_code}, 耗时：{duration:.3f}s)")
+                print(f"  [PASS] 通过 (HTTP {response.status_code}, 耗时：{duration:.3f}s)")
                 print(f"  应用：{data.get('app')}")
                 results.append(("根路径", True, None))
             else:
-                print(f"  ✗ 失败：{data}")
+                print(f"  [FAIL] 失败：{data}")
                 results.append(("根路径", False, str(data)))
         except Exception as e:
-            print(f"  ✗ 异常：{e}")
+            print(f"  [ERROR] 异常：{e}")
             results.append(("根路径", False, str(e)))
         
         # 测试 3: 文档列表
@@ -62,14 +62,14 @@ async def run_tests():
             duration = time.time() - start
             data = response.json()
             if response.status_code == 200 and data.get("code") == 0:
-                print(f"  ✓ 通过 (HTTP {response.status_code}, 耗时：{duration:.3f}s)")
+                print(f"  [PASS] 通过 (HTTP {response.status_code}, 耗时：{duration:.3f}s)")
                 print(f"  文档总数：{data['data']['total']}")
                 results.append(("文档列表", True, None))
             else:
-                print(f"  ✗ 失败：{data}")
+                print(f"  [FAIL] 失败：{data}")
                 results.append(("文档列表", False, str(data)))
         except Exception as e:
-            print(f"  ✗ 异常：{e}")
+            print(f"  [ERROR] 异常：{e}")
             results.append(("文档列表", False, str(e)))
         
         # 测试 4: 上传 TXT 文档
@@ -88,14 +88,14 @@ async def run_tests():
             duration = time.time() - start
             data = response.json()
             if response.status_code == 200 and data.get("code") == 0:
-                print(f"  ✓ 通过 (HTTP {response.status_code}, 耗时：{duration:.3f}s)")
+                print(f"  [PASS] 通过 (HTTP {response.status_code}, 耗时：{duration:.3f}s)")
                 print(f"  文档 ID: {data['data']['id']}")
                 results.append(("文档上传", True, None))
             else:
-                print(f"  ✗ 失败：{data}")
+                print(f"  [FAIL] 失败：{data}")
                 results.append(("文档上传", False, str(data)))
         except Exception as e:
-            print(f"  ✗ 异常：{e}")
+            print(f"  [ERROR] 异常：{e}")
             results.append(("文档上传", False, str(e)))
         
         # 测试 5: 非流式对话
@@ -117,14 +117,14 @@ async def run_tests():
                 results.append(("非流式对话", False, "Pinecone 配置缺失"))
             elif response.status_code == 200:
                 data = response.json()
-                print(f"  ✓ 通过 (HTTP {response.status_code}, 耗时：{duration:.3f}s)")
+                print(f"  [PASS] 通过 (HTTP {response.status_code}, 耗时：{duration:.3f}s)")
                 print(f"  回答：{data['data'].get('answer', 'N/A')[:100]}...")
                 results.append(("非流式对话", True, None))
             else:
-                print(f"  ✗ 失败：HTTP {response.status_code}")
+                print(f"  [FAIL] 失败：HTTP {response.status_code}")
                 results.append(("非流式对话", False, f"HTTP {response.status_code}"))
         except Exception as e:
-            print(f"  ✗ 异常：{e}")
+            print(f"  [ERROR] 异常：{e}")
             results.append(("非流式对话", False, str(e)))
         
         # 测试 6: API 文档
@@ -134,13 +134,13 @@ async def run_tests():
             response = await client.get(f"{BASE_URL}/docs")
             duration = time.time() - start
             if response.status_code == 200:
-                print(f"  ✓ 通过 (HTTP {response.status_code}, 耗时：{duration:.3f}s)")
+                print(f"  [PASS] 通过 (HTTP {response.status_code}, 耗时：{duration:.3f}s)")
                 results.append(("API 文档", True, None))
             else:
-                print(f"  ✗ 失败：HTTP {response.status_code}")
+                print(f"  [FAIL] 失败：HTTP {response.status_code}")
                 results.append(("API 文档", False, f"HTTP {response.status_code}"))
         except Exception as e:
-            print(f"  ✗ 异常：{e}")
+            print(f"  [ERROR] 异常：{e}")
             results.append(("API 文档", False, str(e)))
     
     # 汇总结果
@@ -153,7 +153,7 @@ async def run_tests():
     blocked = sum(1 for r in results if r[2] == "Pinecone 配置缺失")
     
     for name, success, error in results:
-        icon = "✓" if success else ("⚠" if error == "Pinecone 配置缺失" else "✗")
+        icon = "[PASS]" if success else ("[BLOCKED]" if error == "Pinecone 配置缺失" else "[FAIL]")
         status = "通过" if success else ("阻塞 (配置)" if error == "Pinecone 配置缺失" else f"失败：{error}")
         print(f"{icon} {name}: {status}")
     
@@ -181,23 +181,23 @@ async def run_tests():
     
     print("\n功能需求:")
     for fr, success in fr_pass.items():
-        icon = "✓" if success else "✗"
+        icon = "[PASS]" if success else "[FAIL]"
         print(f"  {icon} {fr}: {'符合' if success else '不符合'}")
     
     print("\n非功能需求:")
     for nfr, success in nfr_pass.items():
-        icon = "✓" if success else "✗"
+        icon = "[PASS]" if success else "✗"
         print(f"  {icon} {nfr}: {'符合' if success else '不符合'}")
     
     # 最终结论
     print("\n" + "=" * 80)
     overall_pass_rate = sum(fr_pass.values()) / len(fr_pass) * 100
     if overall_pass_rate >= 80:
-        print("✓ 测试结论：通过（满足 SRS 核心需求）")
+        print("[RESULT] 测试结论：通过（满足 SRS 核心需求）")
     elif overall_pass_rate >= 60:
-        print("⚠ 测试结论：有条件通过（核心功能可用，需完善配置）")
+        print("[RESULT] 测试结论：有条件通过（核心功能可用，需完善配置）")
     else:
-        print("✗ 测试结论：不通过（需修复关键问题）")
+        print("[RESULT] 测试结论：不通过（需修复关键问题）")
     
     if blocked > 0:
         print(f"\n提示：{blocked} 个测试因 Pinecone 配置问题阻塞，配置后即可启用完整 RAG 功能。")

@@ -2,6 +2,8 @@
 
 本目录包含所有测试相关的可执行脚本。
 
+**最后更新**: 2026-03-11（已整理到统一目录）
+
 ## 📋 脚本列表
 
 ### 核心测试脚本（推荐使用）
@@ -9,8 +11,18 @@
 | 脚本名称 | 用途 | 执行命令 | 说明 |
 |----------|------|----------|------|
 | `run_api_tests.py` | API 集成测试 | `python run_api_tests.py` | **主推荐** - 覆盖核心 API 功能 |
-| `test_pinecone_simple.py` | Pinecone 验证 | `python test_pinecone_simple.py` | **主推荐** - Pinecone 服务完整验证 |
+| `test_pinecone_simple.py` | Pinecone 验证 | `python test_pinecone_simple.py` | **主推荐** - Pinecone 服务完整验证（7 个用例） |
 | `quick_check_pinecone.py` | Pinecone 检查 | `python quick_check_pinecone.py` | 快速检查 Pinecone 配置 |
+| `test_settings_load.py` | 配置加载测试 | `python test_settings_load.py` | 测试环境变量配置加载 |
+
+### 辅助验证脚本（归档）
+
+以下脚本已移至 [`../archive/tools/`](../archive/tools/) 目录，仅在特殊场景使用：
+
+- ~~`verify_fix.py`~~ → 验证特定修复是否生效
+- ~~`verify_pinecone_host_removal.py`~~ → 验证 Pinecone host 移除后的功能
+- ~~`verify_pinecone_index.py`~~ → 验证 Pinecone Index 状态
+- ~~`verify_pinecone_upload.py`~~ → 验证向量上传功能 |
 
 ### 标准单元测试
 
@@ -40,16 +52,27 @@
 # 步骤 1: 运行单元测试
 python -m pytest tests/unit/ -v
 
-# 步骤 2: 运行 API 集成测试
-python run_api_tests.py
+# 步骤 2: 运行 API 集成测试（从 test_scripts 目录）
+python test_scripts/run_api_tests.py
 
-# 步骤 3: 运行 Pinecone 专项验证
-python test_pinecone_simple.py
+# 步骤 3: 运行 Pinecone 专项验证（从 test_scripts 目录）
+python test_scripts/test_pinecone_simple.py
 ```
 
-### 2. 查看测试结果
+### 2. 快速验证（日常开发）
 
-预期输出示例：
+```bash
+# Pinecone 配置检查
+python test_scripts/quick_check_pinecone.py
+
+# Pinecone 服务验证
+python test_scripts/test_pinecone_simple.py
+
+# 配置加载测试
+python test_scripts/test_settings_load.py
+```
+
+### 3. 查看测试结果
 
 ```
 ============================= test session starts =============================
@@ -63,7 +86,7 @@ tests\unit\test_pinecone_service.py .............                        [100%]
 ======================== 13 passed, 1 warning in 6.58s ========================
 ```
 
-### 3. 生成覆盖率报告
+### 3. 查看测试结果
 
 ```bash
 # 生成 HTML 覆盖率报告
@@ -72,6 +95,18 @@ python -m pytest tests/unit/ --cov=app --cov-report=html
 # 打开报告
 start htmlcov/index.html  # Windows
 open htmlcov/index.html   # macOS/Linux
+```
+
+### 4. 使用辅助验证工具（特殊场景）
+
+以下工具位于 `../archive/tools/` 目录：
+
+```bash
+# 验证 Index 状态
+python archive/tools/verify_pinecone_index.py
+
+# 验证上传功能
+python archive/tools/verify_pinecone_upload.py
 ```
 
 ---

@@ -19,7 +19,8 @@ from app.exceptions import (
     FileTooLargeError,
     UnsupportedFileTypeError,
     DocumentParseError,
-    DocumentNotFoundException
+    DocumentNotFoundException,
+    VectorizationException
 )
 import structlog
 
@@ -665,14 +666,14 @@ class DocumentService:
         
         except Exception as e:
             logger.error(
-                "pinecone_upsert_failed",
+                "vectorization_failed",
                 doc_id=str(doc_id),
                 error=str(e),
                 error_type=type(e).__name__,
                 exc_info=True
             )
-            # 注意：这里不抛出异常，因为数据库已经保存成功
-            # 可以选择重试或将失败信息记录到数据库
+            # 关键修复：向量化失败时抛出异常，让上层回滚事务
+            raise VectorizationException(f"文档向量化失败：{str(e)}") from e
 
     async def get_document_list(
         self,

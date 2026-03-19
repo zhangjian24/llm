@@ -95,6 +95,16 @@ class RetrievalException(BaseAppException):
         )
 
 
+class VectorizationException(DocumentException):
+    """向量化失败异常"""
+    def __init__(self, reason: str):
+        super().__init__(
+            message=f"文档向量化失败：{reason}",
+            code="VECTORIZATION_FAILED",
+            status_code=500
+        )
+
+
 class GenerationException(BaseAppException):
     """生成失败异常"""
     def __init__(self, reason: str):

@@ -13,6 +13,7 @@ from app.services.embedding_service import EmbeddingService
 from app.services.vector_service_adapter import create_vector_service
 from app.models.document import Document
 from app.models.chunk import Chunk
+from app.models.document_chunk import DocumentChunk
 from app.core.config import get_settings
 from app.exceptions import (
     FileTooLargeError,
@@ -151,10 +152,17 @@ class DocumentService:
             is_large_file=(file_size > self.large_file_threshold)
         )
 
-        # 5. 异步处理文档（不阻塞响应）
-        # 注意：不能直接传递 self.repo，因为它是当前请求的 session
-        # 需要在异步任务中创建新的 session
-        asyncio.create_task(self._process_document_async(doc_id))
+        # 📝 重要说明：
+        # 这里不再自动启动异步处理任务，因为当前事务还未提交
+        # 异步任务需要由调用者在事务提交后手动启动
+        # 参考：app/api/v1/documents.py 中的 upload_document 端点
+
+        # 5. 返回文档 ID，由调用者负责在事务提交后启动异步任务
+        logger.info(
+            "document_ready_for_processing",
+            doc_id=str(doc_id),
+            note="Call _process_document_async(doc_id) after transaction commit"
+        )
 
         return doc_id
 
@@ -228,24 +236,92 @@ class DocumentService:
                 )
 
                 # 2. 获取文件内容
+                # 📝 关键日志：记录获取文件内容的过程
+                logger.debug(
+                    "fetching_document_content",
+                    doc_id=str(doc_id),
+                    doc_file_content_is_null=doc.file_content is None,
+                    doc_file_size=doc.file_size,
+                    using_repo_method="get_document_content"
+                )
+                                
+                # 注意：这里使用 self.repo 而不是 repo（异步任务中创建的）
+                # 因为 self.repo 是上传时使用的，已经包含了文件内容
                 file_content = await self.repo.get_document_content(doc_id)
+                                
+                logger.info(
+                    "document_content_fetched",
+                    doc_id=str(doc_id),
+                    content_size=len(file_content) if file_content else 0,
+                    content_is_null=file_content is None
+                )
+                                
                 if file_content is None:
                     # 如果是大文件分块存储，需要合并内容
                     logger.warning(
                         "document_content_not_found",
                         doc_id=str(doc_id),
-                        suggestion="可能是大文件分块存储，需要实现合并逻辑"
+                        suggestion="可能是大文件分块存储，需要检查 document_chunks 表",
+                        doc_file_content_field=doc.file_content,
+                        doc_chunk_count=doc.chunk_count
                     )
-                    raise DocumentNotFoundException(f"文档内容未找到: {doc_id}")
+                                    
+                    # 尝试从 DocumentChunk 表合并内容（针对大文件）
+                    if doc.chunk_count and doc.chunk_count > 0:
+                        logger.info(
+                            "attempting_to_merge_large_file_chunks",
+                            doc_id=str(doc_id),
+                            chunk_count=doc.chunk_count
+                        )
+                                        
+                        # 查询 document_chunks 表
+                        chunks_result = await session.execute(
+                            select(DocumentChunk.chunk_data)
+                            .where(DocumentChunk.document_id == doc_id)
+                            .order_by(DocumentChunk.chunk_index)
+                        )
+                        chunks = chunks_result.scalars().all()
+                                        
+                        if chunks:
+                            file_content = b''.join(chunks)
+                            logger.info(
+                                "large_file_chunks_merged",
+                                doc_id=str(doc_id),
+                                merged_size=len(file_content),
+                                chunk_count=len(chunks)
+                            )
+                        else:
+                            logger.error(
+                                "no_chunks_found_for_large_file",
+                                doc_id=str(doc_id),
+                                chunk_count=doc.chunk_count
+                            )
+                                    
+                    # 如果仍然没有内容，抛出异常
+                    if file_content is None:
+                        logger.error(
+                            "document_content_really_not_found",
+                            doc_id=str(doc_id),
+                            fatal=True
+                        )
+                        raise DocumentNotFoundException(f"文档内容未找到：{doc_id}")
 
                 # 3. 解析文档
+                logger.debug(
+                    "parsing_document",
+                    doc_id=str(doc_id),
+                    mime_type=doc.mime_type,
+                    content_size=len(file_content) if file_content else 0
+                )
+                
                 parser = ParserRegistry.get_parser(doc.mime_type)
                 text_content = await parser.parse(file_content)
 
                 logger.info(
                     "document_parsed",
                     doc_id=str(doc_id),
-                    text_length=len(text_content)
+                    text_length=len(text_content),
+                    parser_type=type(parser).__name__
                 )
 
                 # 4. 文本分块
@@ -263,7 +339,7 @@ class DocumentService:
                     doc_id=str(doc_id),
                     chunks_count=len(chunks)
                 )
-                await self._vectorize_chunks(repo, chunks, doc_id, doc.filename)
+                await self._vectorize_chunks(repo, chunks, doc_id, doc.filename, session)
 
                 # 6. 更新状态为 ready
                 logger.info(
@@ -359,15 +435,16 @@ class DocumentService:
             finally:
                 await session.close()
 
-    async def _vectorize_chunks(self, repo: DocumentRepository, chunks, doc_id: UUID, filename: str = ""):
+    async def _vectorize_chunks(self, repo: DocumentRepository, chunks, doc_id: UUID, filename: str = "", session=None):
         """
         向量化文档块并存储到 Pinecone 和数据库
-
+    
         Args:
             repo: 文档仓库
             chunks: 文本块列表
             doc_id: 文档 ID
-            filename: 文件名（用于metadata）
+            filename: 文件名（用于 metadata）
+            session: 数据库会话（可选，用于事务一致性）
         """
         logger.info(
             "vectorize_chunks_started",
@@ -375,70 +452,205 @@ class DocumentService:
             chunks_count=len(chunks),
             filename=filename
         )
-
+    
         # 1. 首先保存到数据库
-        for idx, chunk in enumerate(chunks):
-            db_chunk = Chunk(
-                document_id=doc_id,
-                chunk_index=idx,
-                content=chunk.content,
-                token_count=chunk.token_count
-            )
-            await repo.save_chunk(db_chunk)
-
         logger.info(
-            "chunks_saved_to_database",
+            "saving_chunks_to_database",
+            doc_id=str(doc_id),
+            chunks_count=len(chunks)
+        )
+            
+        # 📝 关键：创建 chunk_index 到 db_chunk_id 的映射
+        chunk_id_map = {}
+        
+        for idx, chunk in enumerate(chunks):
+            try:
+                db_chunk = Chunk(
+                    document_id=doc_id,
+                    chunk_index=idx,
+                    content=chunk.content,
+                    token_count=chunk.token_count
+                )
+                    
+                # 📝 关键日志：记录每个 chunk 的初始状态
+                logger.debug(
+                    "chunk_object_created",
+                    doc_id=str(doc_id),
+                    chunk_index=idx,
+                    has_content=bool(db_chunk.content),
+                    content_length=len(db_chunk.content) if db_chunk.content else 0,
+                    has_metadata=db_chunk.metadata is not None,
+                    has_embedding=db_chunk.embedding is not None,
+                    metadata_value=db_chunk.metadata,
+                    embedding_value=db_chunk.embedding
+                )
+                    
+                await repo.save_chunk(db_chunk)
+                
+                # 📝 关键：保存 chunk_id 映射
+                chunk_id_map[idx] = str(db_chunk.id)
+                    
+                # 📝 关键日志：确认保存后的状态
+                logger.debug(
+                    "chunk_saved_to_database",
+                    doc_id=str(doc_id),
+                    chunk_index=idx,
+                    chunk_id=str(db_chunk.id),
+                    has_metadata=db_chunk.metadata is not None,
+                    has_embedding=db_chunk.embedding is not None
+                )
+                    
+            except Exception as chunk_error:
+                logger.error(
+                    "chunk_save_failed",
+                    doc_id=str(doc_id),
+                    chunk_index=idx,
+                    error=str(chunk_error),
+                    error_type=type(chunk_error).__name__,
+                    exc_info=True
+                )
+                raise
+    
+        logger.info(
+            "chunks_saved_to_database_completed",
             doc_id=str(doc_id),
             chunks_count=len(chunks)
         )
 
         # 2. 向量化并存储到向量数据库
+        logger.info(
+            "starting_vectorization_process",
+            doc_id=str(doc_id),
+            chunks_count=len(chunks)
+        )
+                
         try:
             vector_svc = create_vector_service(
                 {'vector_store_type': 'postgresql'})
             embedding_svc = EmbeddingService()
-
+        
             # 准备向量数据
             vectors = []
+            successful_embeddings = 0
+            failed_embeddings = 0
+                    
             for idx, chunk in enumerate(chunks):
-                # 生成向量ID
-                vector_id = f"{str(doc_id)}_chunk_{idx}"
-
+                logger.debug(
+                    "processing_chunk_for_embedding",
+                    doc_id=str(doc_id),
+                    chunk_index=idx,
+                    content_preview=chunk.content[:50] if chunk.content else "NO_CONTENT"
+                )
+                        
+                # 📝 关键：使用已保存的 Chunk UUID
+                vector_id = chunk_id_map.get(idx)
+                if not vector_id:
+                    logger.error(
+                        "chunk_id_not_found_in_map",
+                        doc_id=str(doc_id),
+                        chunk_index=idx
+                    )
+                    continue
+        
                 # 获取文本向量
                 try:
+                    logger.debug(
+                        "calling_embedding_api",
+                        doc_id=str(doc_id),
+                        chunk_index=idx,
+                        text_length=len(chunk.content) if chunk.content else 0
+                    )
+                            
                     vector_values = await embedding_svc.embed_text(chunk.content)
-
-                    # 准备metadata
+        
+                    logger.debug(
+                        "embedding_received",
+                        doc_id=str(doc_id),
+                        chunk_index=idx,
+                        vector_dimension=len(vector_values),
+                        vector_sample=vector_values[:3]
+                    )
+        
+                    # 准备 metadata
                     metadata = {
                         "document_id": str(doc_id),
                         "chunk_index": idx,
-                        "content": chunk.content[:500],  # 只存储前500字符
+                        "content": chunk.content[:500],  # 只存储前 500 字符
                         "filename": filename,
                         "token_count": chunk.token_count
                     }
-
+                            
+                    logger.debug(
+                        "metadata_prepared",
+                        doc_id=str(doc_id),
+                        chunk_index=idx,
+                        metadata_keys=list(metadata.keys()),
+                        content_preview=metadata["content"][:50]
+                    )
+        
                     vectors.append({
                         "id": vector_id,
                         "values": vector_values,
                         "metadata": metadata
                     })
-
+                            
+                    successful_embeddings += 1
+                    logger.debug(
+                        "vector_data_prepared",
+                        doc_id=str(doc_id),
+                        chunk_index=idx,
+                        total_vectors_so_far=len(vectors)
+                    )
+        
                 except Exception as embed_error:
+                    failed_embeddings += 1
                     logger.error(
                         "embedding_failed_for_chunk",
                         doc_id=str(doc_id),
                         chunk_index=idx,
-                        error=str(embed_error)
+                        error=str(embed_error),
+                        error_type=type(embed_error).__name__,
+                        exc_info=True
                     )
-                    # 继续处理其他chunks，不中断整个流程
+                    # 继续处理其他 chunks，不中断整个流程
                     continue
-
+                    
+            logger.info(
+                "embedding_phase_completed",
+                doc_id=str(doc_id),
+                total_chunks=len(chunks),
+                successful=successful_embeddings,
+                failed=failed_embeddings,
+                vectors_to_upsert=len(vectors)
+            )
+        
             if vectors:
-                # 批量upsert到向量数据库
+                # 📝 关键日志：批量 upsert 前的最终检查
+                logger.info(
+                    "upsert_vectors_validation",
+                    doc_id=str(doc_id),
+                    vectors_count=len(vectors),
+                    sample_vector={
+                        "id": vectors[0]["id"],
+                        "has_values": "values" in vectors[0],
+                        "values_dimension": len(vectors[0].get("values", [])),
+                        "has_metadata": "metadata" in vectors[0],
+                        "metadata_sample": vectors[0].get("metadata", {})
+                    } if vectors else None
+                )
+                        
+                # 批量 upsert 到向量数据库
+                logger.info(
+                    "calling_upsert_vectors",
+                    doc_id=str(doc_id),
+                    vectors_count=len(vectors)
+                )
+                        
                 await vector_svc.upsert_vectors(
+                    session=session,  # ✅ 使用外部传入的 session
                     vectors=vectors
                 )
-
+        
                 logger.info(
                     "vectors_upserted_to_vector_db",
                     doc_id=str(doc_id),
@@ -450,12 +662,13 @@ class DocumentService:
                     doc_id=str(doc_id),
                     reason="embedding_failed_for_all_chunks"
                 )
-
+        
         except Exception as e:
             logger.error(
                 "pinecone_upsert_failed",
                 doc_id=str(doc_id),
                 error=str(e),
+                error_type=type(e).__name__,
                 exc_info=True
             )
             # 注意：这里不抛出异常，因为数据库已经保存成功

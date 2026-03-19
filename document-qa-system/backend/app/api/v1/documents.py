@@ -1,6 +1,7 @@
 """
 文档管理 API 路由
 """
+import asyncio
 from fastapi import APIRouter, Depends, Query, HTTPException, File
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
@@ -46,6 +47,7 @@ async def upload_document(
     try:
         file_size = len(file)
 
+        # 1. 上传文档（此时不启动异步任务）
         doc_id = await service.upload_document(
             file_content=file,
             filename=filename,
@@ -54,10 +56,47 @@ async def upload_document(
         )
 
         logger.info(
-            "document_upload_api",
+            "document_uploaded_api",
             doc_id=str(doc_id),
-            filename=filename
+            filename=filename,
+            status="waiting_for_commit"
         )
+
+        # 📝 关键：先返回响应给客户端，然后在后台启动异步任务
+        # 使用 BackgroundTasks 或在响应后手动处理
+        # 这里我们采用简单的方式：在事务提交后启动异步任务
+        
+        # 2. 获取当前 session 用于提交事务（通过依赖注入的 session）
+        from app.core.database import get_db_session
+        async for session in get_db_session():
+            try:
+                # 3. 提交事务，确保文档记录已写入数据库
+                await session.commit()
+                
+                logger.info(
+                    "transaction_committed",
+                    doc_id=str(doc_id)
+                )
+                
+                # 4. 事务提交后再启动异步处理任务
+                logger.info(
+                    "starting_async_processing",
+                    doc_id=str(doc_id),
+                    after_commit=True
+                )
+                asyncio.create_task(service._process_document_async(doc_id))
+                
+            except Exception as commit_error:
+                logger.error(
+                    "commit_failed",
+                    doc_id=str(doc_id),
+                    error=str(commit_error),
+                    exc_info=True
+                )
+                await session.rollback()
+                raise
+            finally:
+                await session.close()
 
         return SuccessResponse(
             data=DocumentDTO(

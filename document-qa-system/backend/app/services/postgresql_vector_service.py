@@ -171,7 +171,8 @@ class PostgreSQLVectorService:
     async def upsert_vectors(
         self,
         session: AsyncSession,
-        vectors: List[Dict[str, Any]]
+        vectors: List[Dict[str, Any]],
+        namespace: Optional[str] = None  # ✅ 添加 namespace 参数以统一接口（PostgreSQL 不使用）
     ):
         """
         插入或更新向量
@@ -188,48 +189,105 @@ class PostgreSQLVectorService:
                         "content": "content"
                     }
                 }
+            namespace: 命名空间（可选，Pinecone 专用，PostgreSQL 忽略此参数）
         """
         try:
-            for vector_data in vectors:
+            logger.info(
+                "postgres_vector_upsert_started",
+                vectors_count=len(vectors),
+                dimension=self.dimension
+            )
+            
+            success_count = 0
+            failed_count = 0
+            not_found_count = 0
+            
+            for i, vector_data in enumerate(vectors):
                 chunk_id = vector_data["id"]
                 embedding = vector_data["values"]
                 metadata = vector_data.get("metadata", {})
                 
+                logger.debug(
+                    "processing_vector_upsert",
+                    index=i,
+                    chunk_id=chunk_id,
+                    has_values="values" in vector_data,
+                    values_dimension=len(embedding) if "values" in vector_data else 0,
+                    has_metadata="metadata" in vector_data,
+                    metadata_keys=list(metadata.keys()) if metadata else None
+                )
+                
+                # 📝 关键日志：验证输入数据
+                logger.debug(
+                    "vector_data_validation",
+                    chunk_id=chunk_id,
+                    embedding_type=type(embedding).__name__,
+                    embedding_len=len(embedding),
+                    embedding_sample=embedding[:3] if len(embedding) > 0 else None,
+                    metadata_type=type(metadata).__name__,
+                    metadata_content_preview=metadata.get("content", "")[:50] if metadata else None
+                )
+                
                 # 验证向量维度
                 if len(embedding) != self.dimension:
+                    logger.error(
+                        "vector_dimension_mismatch",
+                        chunk_id=chunk_id,
+                        expected_dimension=self.dimension,
+                        actual_dimension=len(embedding)
+                    )
                     raise ValueError(f"向量维度不匹配：期望 {self.dimension}，得到 {len(embedding)}")
                 
-                # 更新 chunk 的 embedding 字段
-                stmt = select(Chunk).where(Chunk.id == chunk_id)
-                result = await session.execute(stmt)
-                chunk = result.scalar_one_or_none()
+                # 📝 关键：直接执行 UPDATE，避免 SELECT 加载 embedding 字段
+                # 使用 update().values() 方式
+                from sqlalchemy import update
                 
-                if chunk:
-                    chunk.embedding = np.array(embedding, dtype=np.float32)
-                    # 可以同时更新其他元数据
-                    if "content" in metadata:
-                        chunk.content = metadata["content"]
-                    if "chunk_index" in metadata:
-                        chunk.chunk_index = metadata["chunk_index"]
-                else:
-                    logger.warning(
-                        "chunk_not_found_for_vector_upsert",
-                        chunk_id=chunk_id
-                    )
-            
-            await session.commit()
+                # 📝 注意：metadata 是 SQLAlchemy 保留字，需要使用 chunk_metadata
+                update_data = {
+                    "embedding": np.array(embedding, dtype=np.float32),
+                    "content": metadata.get("content"),
+                    "chunk_index": metadata.get("chunk_index"),
+                    "chunk_metadata": metadata if metadata else None  # ✅ 使用 chunk_metadata 而非 metadata
+                }
+                
+                update_stmt = (
+                    update(Chunk)
+                    .where(Chunk.id == chunk_id)
+                    .values(**update_data)
+                )
+                
+                await session.execute(update_stmt)
+                success_count += 1
+                
+                logger.info(
+                    "chunk_updated_successfully",
+                    chunk_id=chunk_id,
+                    embedding_dimension=len(embedding)
+                )
             
             logger.info(
-                "postgres_vector_upsert_completed",
-                count=len(vectors)
+                "postgres_vector_upsert_phase_completed",
+                total_vectors=len(vectors),
+                successful_updates=success_count,
+                chunks_not_found=not_found_count,
+                failed_updates=failed_count
+            )
+            
+            # ✅ 不再在这里 commit，由外部 session 统一管理事务
+            logger.info(
+                "postgres_vector_upsert_completed_without_commit",
+                committed_count=success_count
             )
             
         except Exception as e:
             logger.error(
                 "postgres_vector_upsert_failed",
                 error=str(e),
+                error_type=type(e).__name__,
+                vectors_count=len(vectors),
                 exc_info=True
             )
+            await session.rollback()
             raise RetrievalException(f"PostgreSQL 向量插入失败：{str(e)}")
 
     async def delete_vectors(

@@ -4,9 +4,11 @@
 """
 import httpx
 from typing import List
+import structlog
 from app.core.config import get_settings
 from app.exceptions import RetrievalException
 
+logger = structlog.get_logger()
 settings = get_settings()
 
 
@@ -36,37 +38,101 @@ class EmbeddingService:
         Raises:
             RetrievalException: API 调用失败时抛出
         """
+        logger.debug(
+            "embedding_request_started",
+            text_length=len(text),
+            text_preview=text[:100] if text else "EMPTY_TEXT",
+            model=self.model,
+            api_url=self.base_url
+        )
+        
         try:
             async with httpx.AsyncClient() as client:
+                request_payload = {
+                    "model": self.model,
+                    "input": text
+                }
+                
+                logger.debug(
+                    "sending_embedding_request",
+                    payload_size=len(str(request_payload)),
+                    timeout=30.0
+                )
+                
                 response = await client.post(
                     f"{self.base_url}/embeddings",
                     headers={
                         "Authorization": f"Bearer {self.api_key}",
                         "Content-Type": "application/json"
                     },
-                    json={
-                        "model": self.model,
-                        "input": text
-                    },
+                    json=request_payload,
                     timeout=30.0
+                )
+                
+                logger.debug(
+                    "embedding_api_response_received",
+                    status_code=response.status_code,
+                    response_time_ms=response.elapsed.total_seconds() * 1000,
+                    response_size_bytes=len(response.content),
+                    headers=dict(response.headers)
                 )
                 
                 if response.status_code != 200:
                     logger.error(
                         "embedding_api_error",
                         status_code=response.status_code,
-                        response_text=response.text[:200]
+                        response_body=response.text[:500],
+                        request_payload=request_payload
                     )
                     raise RetrievalException(f"Embedding API 返回错误：{response.status_code}")
                 
                 data = response.json()
+                
+                logger.debug(
+                    "embedding_response_parsed",
+                    data_keys=list(data.keys()),
+                    usage=data.get('usage', {})
+                )
+                
                 embedding = data['data'][0]['embedding']
+                
+                logger.info(
+                    "embedding_success",
+                    vector_dimension=len(embedding),
+                    vector_sample_first_5=embedding[:5],
+                    vector_sample_last_5=embedding[-5:],
+                    vector_min=min(embedding),
+                    vector_max=max(embedding),
+                    usage=data.get('usage', {})
+                )
                 
                 return embedding
                 
         except httpx.RequestError as e:
+            logger.error(
+                "embedding_request_failed",
+                error=str(e),
+                error_type=type(e).__name__,
+                request_url=f"{self.base_url}/embeddings",
+                timeout=getattr(e, 'request', None),
+                exc_info=True
+            )
             raise RetrievalException(f"Embedding API 请求失败：{str(e)}")
+        except KeyError as e:
+            logger.error(
+                "embedding_response_format_error",
+                error=str(e),
+                response_data=data if 'data' in locals() else None,
+                exc_info=True
+            )
+            raise RetrievalException(f"Embedding 响应格式错误：{str(e)}")
         except Exception as e:
+            logger.error(
+                "embedding_processing_failed",
+                error=str(e),
+                error_type=type(e).__name__,
+                exc_info=True
+            )
             raise RetrievalException(f"Embedding 处理失败：{str(e)}")
     
     async def embed_batch(self, texts: List[str], batch_size: int = 32) -> List[List[float]]:

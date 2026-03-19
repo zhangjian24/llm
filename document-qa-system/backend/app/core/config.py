@@ -47,7 +47,7 @@ class Settings(BaseSettings):
     CHUNK_OVERLAP: int = 150
     RAG_TOP_K: int = 10
     RERANK_TOP_K: int = 5
-    RELEVANCE_THRESHOLD: float = 0.7
+    RELEVANCE_THRESHOLD: float = 0.3  # ✅ 降低阈值，允许更多结果返回
     MAX_RETRIEVAL_DOCS: int = 10
     
     # 文件上传配置

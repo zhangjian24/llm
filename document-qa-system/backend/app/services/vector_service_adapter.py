@@ -32,6 +32,7 @@ class VectorServiceInterface(ABC):
     @abstractmethod
     async def upsert_vectors(
         self,
+        session,
         vectors: List[Dict[str, Any]],
         namespace: Optional[str] = None
     ):
@@ -133,6 +134,7 @@ class VectorServiceAdapter(VectorServiceInterface):
     
     async def upsert_vectors(
         self,
+        session,
         vectors: List[Dict[str, Any]],
         namespace: Optional[str] = None
     ):
@@ -144,29 +146,28 @@ class VectorServiceAdapter(VectorServiceInterface):
                 vectors_count=len(vectors),
                 namespace=namespace
             )
-            
-            # 调用具体实现
-            if hasattr(self.service_impl, 'session'):
-                # PostgreSQL 实现
-                from app.core.database import AsyncSessionLocal
-                async with AsyncSessionLocal() as session:
-                    await self.service_impl.upsert_vectors(
-                        session=session,
-                        vectors=vectors
-                    )
+                
+            # 📝 关键：根据 service_type（类名）选择正确的调用方式
+            if type(self.service_impl).__name__ == 'PostgreSQLVectorService':
+                # PostgreSQL 实现需要 session
+                await self.service_impl.upsert_vectors(
+                    session=session,
+                    vectors=vectors,
+                    namespace=namespace  # ✅ 传递 namespace（虽然不使用）
+                )
             else:
-                # Pinecone 实现
+                # Pinecone 实现不需要 session
                 await self.service_impl.upsert_vectors(
                     vectors=vectors,
                     namespace=namespace
                 )
-            
+                
             logger.info(
                 "vector_upsert_completed",
                 service_type=self.service_type,
                 vectors_count=len(vectors)
             )
-            
+                
         except Exception as e:
             logger.error(
                 "vector_upsert_failed",
@@ -174,7 +175,7 @@ class VectorServiceAdapter(VectorServiceInterface):
                 error=str(e),
                 exc_info=True
             )
-            raise RetrievalException(f"向量插入失败[{self.service_type}]：{str(e)}")
+            raise RetrievalException(f"向量插入失败 [{self.service_type}]：{str(e)}")
     
     async def delete_vectors(
         self,

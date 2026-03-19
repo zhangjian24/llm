@@ -44,6 +44,8 @@ ENV/
 *.db
 *.sqlite
 uploads/
+storage/
+backend/app/storage/
 vector_store/
 
 # Logs

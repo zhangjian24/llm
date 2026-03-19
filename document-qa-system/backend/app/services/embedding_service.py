@@ -52,6 +52,11 @@ class EmbeddingService:
                 )
                 
                 if response.status_code != 200:
+                    logger.error(
+                        "embedding_api_error",
+                        status_code=response.status_code,
+                        response_text=response.text[:200]
+                    )
                     raise RetrievalException(f"Embedding API 返回错误：{response.status_code}")
                 
                 data = response.json()

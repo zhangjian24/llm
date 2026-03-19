@@ -7,6 +7,10 @@ from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 from uuid import uuid4
 from app.core.database import Base
+from app.models.types import Vector
+from app.core.config import get_settings
+
+settings = get_settings()
 
 
 class Chunk(Base):
@@ -28,6 +32,8 @@ class Chunk(Base):
     chunk_index = Column(Integer, nullable=False)
     content = Column(Text, nullable=False)
     token_count = Column(Integer, nullable=False)
+    # 向量嵌入字段（PostgreSQL pgvector）
+    embedding = Column(Vector(settings.VECTOR_DIMENSION), nullable=True)
     # 使用 'chunk_metadata' 避免 SQLAlchemy 保留字冲突，数据库列名仍为 'metadata'
     chunk_metadata = Column(JSONB, nullable=True, name="metadata")
     
@@ -35,4 +41,5 @@ class Chunk(Base):
     document = relationship("Document", back_populates="chunks")
     
     def __repr__(self):
-        return f"<Chunk(id={self.id}, document_id={self.document_id}, index={self.chunk_index})>"
+        has_embedding = self.embedding is not None
+        return f"<Chunk(id={self.id}, document_id={self.document_id}, index={self.chunk_index}, has_embedding={has_embedding})>"

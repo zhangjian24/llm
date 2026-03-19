@@ -35,30 +35,30 @@ async def upload_document(
 ):
     """
     上传文档
-    
+
     - **file**: 文件二进制内容
     - **mime_type**: 文件 MIME 类型
     - **filename**: 文件名
-    
+
     返回:
     - 文档 ID 和处理状态
     """
     try:
         file_size = len(file)
-        
+
         doc_id = await service.upload_document(
             file_content=file,
             filename=filename,
             mime_type=mime_type,
             file_size=file_size
         )
-        
+
         logger.info(
             "document_upload_api",
             doc_id=str(doc_id),
             filename=filename
         )
-        
+
         return SuccessResponse(
             data=DocumentDTO(
                 id=doc_id,
@@ -70,7 +70,7 @@ async def upload_document(
                 updated_at=None
             )
         )
-        
+
     except Exception as e:
         logger.error("upload_failed", error=str(e))
         raise HTTPException(status_code=400, detail=str(e))
@@ -85,7 +85,7 @@ async def get_documents(
 ):
     """
     获取文档列表
-    
+
     - **page**: 页码（从 1 开始）
     - **limit**: 每页数量
     - **status**: 状态筛选（processing/ready/failed）
@@ -96,9 +96,9 @@ async def get_documents(
             limit=limit,
             status=status
         )
-        
+
         total_pages = (total + limit - 1) // limit
-        
+
         items = [
             DocumentListDTO(
                 id=doc.id,
@@ -112,7 +112,7 @@ async def get_documents(
             )
             for doc in docs
         ]
-        
+
         return SuccessResponse(
             data=PageDTO(
                 total=total,
@@ -122,7 +122,7 @@ async def get_documents(
                 total_pages=total_pages
             )
         )
-        
+
     except Exception as e:
         logger.error("get_list_failed", error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
@@ -135,17 +135,17 @@ async def delete_document(
 ):
     """
     删除文档
-    
+
     - **doc_id**: 文档 ID
     """
     try:
         success = await service.delete_document(doc_id)
-        
+
         if not success:
             raise HTTPException(status_code=404, detail="文档不存在")
-        
+
         logger.info("document_deleted", doc_id=str(doc_id))
-        
+
     except HTTPException:
         raise
     except Exception as e:

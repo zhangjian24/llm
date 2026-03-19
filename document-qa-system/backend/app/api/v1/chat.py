@@ -12,7 +12,7 @@ from app.core.database import get_db_session
 from app.repositories.conversation_repository import ConversationRepository
 from app.services.chat_service import ChatService
 from app.services.embedding_service import EmbeddingService
-from app.services.pinecone_service import PineconeService
+from app.services.vector_service_adapter import create_vector_service
 from app.services.rerank_service import RerankService
 from app.services.rag_service import RAGService
 from app.schemas.chat import ChatQueryDTO, ChatResponseDTO, ConversationDTO
@@ -33,9 +33,9 @@ def get_chat_service(session: AsyncSession = Depends(get_db_session)) -> ChatSer
 def get_rag_service() -> RAGService:
     """获取 RAGService 实例"""
     embedding_svc = EmbeddingService()
-    pinecone_svc = PineconeService()
+    vector_svc = create_vector_service({'vector_store_type': 'postgresql'})
     rerank_svc = RerankService()
-    return RAGService(embedding_svc, pinecone_svc, rerank_svc)
+    return RAGService(embedding_svc, vector_svc, rerank_svc)
 
 
 @router.post("/")

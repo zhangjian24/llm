@@ -1,11 +1,11 @@
 import React, { useState, useRef } from 'react';
-import { useChatStore } from '../stores/chatStore';
-import { chatAPI } from '../services/api';
-import type { Message } from '../types';
+import { useChatStore } from '../../stores/chatStore';
+import { chatAPI } from '../../services/api';
+import type { Message } from '../../types';
 
 export const ChatInput: React.FC = () => {
   const [input, setInput] = useState('');
-  const { addMessage, setCurrentConversation, setLoading, setError } = useChatStore();
+  const { addMessage, updateLastAssistantMessage, setCurrentConversation, setLoading, setError } = useChatStore();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -25,12 +25,19 @@ export const ChatInput: React.FC = () => {
     setError(null);
 
     try {
+      // 添加初始的助手消息
+      addMessage({
+        role: 'assistant',
+        content: '',
+        created_at: new Date().toISOString()
+      });
+
       // 使用流式 API
       await chatAPI.chatStream(
         { query: input.trim(), top_k: 5, stream: true },
         (token) => {
-          // 累积 token - 这里简化处理，实际应该更新最后一条消息
-          console.log('Token:', token);
+          // 实时更新助手消息内容
+          updateLastAssistantMessage(token);
         },
         (conversationId) => {
           setCurrentConversation(conversationId);
@@ -39,11 +46,23 @@ export const ChatInput: React.FC = () => {
         (error) => {
           setError(error);
           setLoading(false);
+          // 在错误消息后添加错误提示
+          addMessage({
+            role: 'assistant',
+            content: `❌ 抱歉，处理您的问题时出现错误: ${error}`,
+            created_at: new Date().toISOString()
+          });
         }
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : '发送失败');
       setLoading(false);
+      // 添加错误提示消息
+      addMessage({
+        role: 'assistant',
+        content: `❌ ${err instanceof Error ? err.message : '发送失败'}`,
+        created_at: new Date().toISOString()
+      });
     }
   };
 

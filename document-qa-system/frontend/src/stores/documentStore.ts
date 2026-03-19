@@ -13,6 +13,7 @@ interface DocumentState {
   setDocuments: (documents: Document[], total: number) => void;
   addDocument: (document: Document) => void;
   removeDocument: (id: string) => void;
+  updateDocumentStatus: (id: string, status: Document['status'], chunksCount?: number) => void;
   setPage: (page: number) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
@@ -46,6 +47,15 @@ export const useDocumentStore = create<DocumentState>((set) => ({
 
   setLoading: (loading) =>
     set({ isLoading: loading }),
+
+  updateDocumentStatus: (id, status, chunksCount) =>
+    set((state) => ({
+      documents: state.documents.map((doc) =>
+        doc.id === id 
+          ? { ...doc, status, chunks_count: chunksCount, updated_at: new Date().toISOString() }
+          : doc
+      ),
+    })),
 
   setError: (error) =>
     set({ error, isLoading: false }),

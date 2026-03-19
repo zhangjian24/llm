@@ -1,12 +1,13 @@
 """
 FastAPI 应用主入口
 """
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.core.database import init_db, close_db
 from app.core.config import get_settings
 from app.utils.logger import setup_logging
+from app.websocket_manager import manager
 import structlog
 
 settings = get_settings()
@@ -66,6 +67,47 @@ async def root():
         "version": settings.VERSION,
         "docs": "/docs"
     }
+
+
+# WebSocket 路由：实时推送文档状态
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    """
+    WebSocket 端点，用于实时推送文档状态更新
+    
+    客户端连接后会：
+    1. 接受连接
+    2. 保持连接活跃
+    3. 接收并忽略心跳消息（如果有）
+    4. 断开时清理资源
+    """
+    connection_id = await manager.connect(websocket)
+    try:
+        # 发送欢迎消息
+        await websocket.send_json({
+            "type": "connected",
+            "connection_id": connection_id,
+            "message": "已连接到文档状态推送服务"
+        })
+        
+        # 保持连接活跃
+        while True:
+            # 接收客户端消息（心跳或控制消息）
+            data = await websocket.receive_text()
+            
+            # 可以处理客户端的控制消息
+            # 这里暂时只记录日志
+            logger.debug("websocket_message_received", message=data)
+            
+    except Exception as e:
+        logger.error(
+            "websocket_error",
+            connection_id=connection_id,
+            error=str(e),
+            exc_info=True
+        )
+    finally:
+        manager.disconnect(websocket)
 
 
 # 导入并注册路由

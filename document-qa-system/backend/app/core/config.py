@@ -20,14 +20,18 @@ class Settings(BaseSettings):
     # 数据库配置
     DATABASE_URL: str = "postgresql+asyncpg://localhost/rag_qa"
     
-    # Pinecone 配置
-    # 注意：Pinecone SDK v8+ 不再需要 PINECONE_HOST，自动根据 index_name 解析 endpoint
-    PINECONE_API_KEY: str = ""
-    PINECONE_INDEX_NAME: str = "rag-documents"
+    # 向量存储配置（PostgreSQL pgvector）
+    # 向量维度（需与 embedding 模型输出维度一致）
+    VECTOR_DIMENSION: int = 1024
+    # 向量索引类型（hnsw 或 ivfflat）
+    VECTOR_INDEX_TYPE: str = "hnsw"
+    # HNSW 索引参数
+    HNSW_M: int = 16
+    HNSW_EF_CONSTRUCTION: int = 64
     
     # 阿里云百炼配置
     DASHSCOPE_API_KEY: str = ""
-    DASHSCOPE_BASE_URL: str = "https://dashscope.aliyuncs.com/api/v1"
+    DASHSCOPE_BASE_URL: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
     
     # OpenAI 兼容配置（用于其他 LLM 服务）
     OPENAI_API_KEY: str = ""
@@ -75,6 +79,7 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env.local"
         case_sensitive = True
+        extra = "ignore"  # 忽略未知的环境变量
 
 
 @lru_cache()

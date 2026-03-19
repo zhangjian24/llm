@@ -11,9 +11,11 @@ asyncpg==0.29.0
 alembic==1.13.1
 
 # Vector Database
-# 已升级至 Pinecone SDK v8+ (5.1+)
-# API 变更：使用枚举类型替代字符串，新增 vector_type 参数
-pinecone>=5.1.0
+# PostgreSQL 向量存储 (pgvector)
+# numpy 用于向量计算和相似度计算
+numpy>=1.24.0
+# SQLAlchemy 向量类型支持
+sqlalchemy-utils>=0.41.0
 
 # LLM & Embedding
 langchain==0.1.4

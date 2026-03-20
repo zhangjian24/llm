@@ -2,7 +2,7 @@
 文档管理 API 路由
 """
 import asyncio
-from fastapi import APIRouter, Depends, Query, HTTPException, File
+from fastapi import APIRouter, Depends, Query, HTTPException, File, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 from uuid import UUID
@@ -32,7 +32,8 @@ async def upload_document(
     file: bytes = File(..., description="上传的文件"),
     mime_type: str = Query(..., description="文件 MIME 类型"),
     filename: str = Query(..., description="文件名"),
-    service: DocumentService = Depends(get_document_service)
+    service: DocumentService = Depends(get_document_service),
+    background_tasks: BackgroundTasks = None
 ):
     """
     上传文档
@@ -62,51 +63,23 @@ async def upload_document(
             status="waiting_for_commit"
         )
 
-        # 📝 关键：先返回响应给客户端，然后在后台启动异步任务
-        # 使用 BackgroundTasks 或在响应后手动处理
-        # 这里我们采用简单的方式：在事务提交后启动异步任务
+        # 2. 添加到后台任务队列，事务提交后执行
+        if background_tasks:
+            background_tasks.add_task(service._process_document_async, doc_id)
+            logger.info(
+                "background_task_added",
+                doc_id=str(doc_id),
+                note="Will execute after response is sent"
+            )
         
-        # 2. 获取当前 session 用于提交事务（通过依赖注入的 session）
-        from app.core.database import get_db_session
-        async for session in get_db_session():
-            try:
-                # 3. 提交事务，确保文档记录已写入数据库
-                await session.commit()
-                
-                logger.info(
-                    "transaction_committed",
-                    doc_id=str(doc_id)
-                )
-                
-                # 4. 事务提交后再启动异步处理任务
-                logger.info(
-                    "starting_async_processing",
-                    doc_id=str(doc_id),
-                    after_commit=True
-                )
-                asyncio.create_task(service._process_document_async(doc_id))
-                
-            except Exception as commit_error:
-                logger.error(
-                    "commit_failed",
-                    doc_id=str(doc_id),
-                    error=str(commit_error),
-                    exc_info=True
-                )
-                await session.rollback()
-                raise
-            finally:
-                await session.close()
-
+        # 3. 立即返回响应
         return SuccessResponse(
             data=DocumentDTO(
                 id=doc_id,
                 filename=filename,
                 file_size=file_size,
                 mime_type=mime_type,
-                status="processing",
-                created_at=None,  # TODO: 从数据库获取
-                updated_at=None
+                status="processing"
             )
         )
 

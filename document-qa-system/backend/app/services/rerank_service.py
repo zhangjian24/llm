@@ -20,7 +20,7 @@ class RerankService:
     
     def __init__(self):
         self.api_key = settings.DASHSCOPE_API_KEY
-        self.base_url = settings.DASHSCOPE_BASE_URL
+        self.base_url = "https://dashscope.aliyuncs.com/api/v1"
         self.model = settings.RERANK_MODEL
     
     async def rerank(
@@ -46,13 +46,12 @@ class RerankService:
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.post(
-                    f"{self.base_url}/rerank",
+                    f"{self.base_url}/services/rerank/text-rerank/{self.model}",
                     headers={
                         "Authorization": f"Bearer {self.api_key}",
                         "Content-Type": "application/json"
                     },
                     json={
-                        "model": self.model,
                         "query": query,
                         "documents": documents,
                         "top_n": top_k

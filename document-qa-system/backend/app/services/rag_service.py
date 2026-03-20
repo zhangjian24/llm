@@ -158,7 +158,14 @@ class RAGService:
                     error_type=type(rerank_error).__name__
                 )
                 # 重排序失败时，使用原始相似度结果
-                reranked_chunks = similar_chunks[:rerank_top_k]
+                # 将向量相似度 score 复制到 relevance_score 字段
+                reranked_chunks = []
+                for chunk in similar_chunks[:rerank_top_k]:
+                    chunk_copy = chunk.copy()
+                    # 如果没有 relevance_score，使用原始 score
+                    if 'relevance_score' not in chunk_copy:
+                        chunk_copy['relevance_score'] = chunk_copy.get('score', 0)
+                    reranked_chunks.append(chunk_copy)
             
             # Step 4: 过滤低相关性结果
             logger.info(

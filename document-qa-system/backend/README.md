@@ -211,17 +211,6 @@ python test_scripts/run_api_tests.py
 | `quick_check_pinecone.py` | **快速检查** - Pinecone 配置验证 | `python quick_check_pinecone.py` |
 | `cleanup_test_data.py` | **测试数据清理** - 清理测试产生的文档和会话 | `python cleanup_test_data.py` |
 
-### 已删除的重复脚本
-
-以下脚本因功能重复已被删除：
-- ~~test_precision_recall_comprehensive.py~~ → 合并到 `test_precision_recall.py`
-- ~~test_precision_recall_final.py~~ → 合并到 `test_precision_recall.py`
-- ~~test_precision_recall_improved.py~~ → 合并到 `test_precision_recall.py`
-- ~~test_quick_precision_recall.py~~ → 合并到 `test_precision_recall.py`
-- ~~test_vector_search_simple.py~~ → 功能已包含在其他脚本中
-- ~~test_raw_sql.py~~ → 功能已包含在 `test_full_pipeline.py`
-- ~~其他调试脚本~~ → 已归档或删除
-
 ---
 
 ## 📝 环境变量配置

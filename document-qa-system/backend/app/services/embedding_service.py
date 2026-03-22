@@ -181,3 +181,25 @@ class EmbeddingService:
                 raise RetrievalException(f"批量 Embedding 失败：{str(e)}")
         
         return all_embeddings
+    
+    async def delete_vectors_by_document(self, doc_id: str) -> bool:
+        """
+        删除指定文档的所有向量（通过 vector_service_adapter 调用）
+        
+        注意：这个方法实际上是通过 VectorServiceAdapter 来删除的
+        这里只是为了保持接口完整性，实际删除逻辑在 vector_service_adapter.py 中
+        
+        Args:
+            doc_id: 文档 ID
+            
+        Returns:
+            bool: 是否删除成功
+        """
+        # 实际删除逻辑由 DocumentService 通过 vector_service_adapter 调用
+        # 这里仅作为接口占位
+        logger.warning(
+            "delete_vectors_by_document_called_directly",
+            doc_id=doc_id,
+            note="This method should be called via VectorServiceAdapter"
+        )
+        return False

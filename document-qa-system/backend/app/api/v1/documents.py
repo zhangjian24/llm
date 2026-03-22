@@ -2,7 +2,7 @@
 文档管理 API 路由
 """
 import asyncio
-from fastapi import APIRouter, Depends, Query, HTTPException, File, BackgroundTasks
+from fastapi import APIRouter, Depends, Query, HTTPException, File
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 from uuid import UUID
@@ -33,7 +33,7 @@ async def upload_document(
     mime_type: str = Query(..., description="文件 MIME 类型"),
     filename: str = Query(..., description="文件名"),
     service: DocumentService = Depends(get_document_service),
-    background_tasks: BackgroundTasks = None
+    session: AsyncSession = Depends(get_db_session)  # 获取 session 用于提交事务
 ):
     """
     上传文档
@@ -48,7 +48,7 @@ async def upload_document(
     try:
         file_size = len(file)
 
-        # 1. 上传文档（此时不启动异步任务）
+        # 1. 上传文档（创建文档记录）
         doc_id = await service.upload_document(
             file_content=file,
             filename=filename,
@@ -60,26 +60,34 @@ async def upload_document(
             "document_uploaded_api",
             doc_id=str(doc_id),
             filename=filename,
-            status="waiting_for_commit"
+            status="processing"
         )
 
-        # 2. 添加到后台任务队列，事务提交后执行
-        if background_tasks:
-            background_tasks.add_task(service._process_document_async, doc_id)
-            logger.info(
-                "background_task_added",
-                doc_id=str(doc_id),
-                note="Will execute after response is sent"
-            )
+        # 2. 显式提交事务，确保文档记录已写入数据库
+        await session.commit()
         
-        # 3. 立即返回响应
+        logger.info(
+            "transaction_committed",
+            doc_id=str(doc_id)
+        )
+
+        # 3. 事务提交后再启动异步处理任务
+        logger.info(
+            "starting_async_processing",
+            doc_id=str(doc_id),
+            after_commit=True
+        )
+        asyncio.create_task(service._process_document_async(doc_id))
+
         return SuccessResponse(
             data=DocumentDTO(
                 id=doc_id,
                 filename=filename,
                 file_size=file_size,
                 mime_type=mime_type,
-                status="processing"
+                status="processing",
+                created_at=None,
+                updated_at=None
             )
         )
 
@@ -158,8 +166,64 @@ async def delete_document(
 
         logger.info("document_deleted", doc_id=str(doc_id))
 
+    except ValueError as e:
+        # 状态非法（处理中禁止删除）
+        logger.warning(
+            "delete_invalid_status",
+            doc_id=str(doc_id),
+            error=str(e)
+        )
+        raise HTTPException(status_code=400, detail=str(e))
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error("delete_failed", error=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/{doc_id}/reprocess")
+async def reprocess_document(
+    doc_id: UUID,
+    service: DocumentService = Depends(get_document_service)
+):
+    """
+    重新处理文档
+
+    仅允许状态为 "failed" 或 "ready" 的文档重新处理。
+    重新处理会清空旧的 chunk 数据和向量，然后重新启动异步处理流程。
+
+    - **doc_id**: 文档 ID
+
+    返回:
+    - 成功消息
+    """
+    try:
+        # 尝试重新处理文档
+        success = await service.reprocess_document(doc_id)
+
+        if not success:
+            raise HTTPException(status_code=500, detail="重新处理失败")
+
+        logger.info(
+            "document_reprocessing_requested",
+            doc_id=str(doc_id),
+            message="已启动重新处理流程"
+        )
+
+        return SuccessResponse(message="已开始重新处理")
+
+    except ValueError as e:
+        # 状态非法
+        logger.warning(
+            "reprocess_invalid_status",
+            doc_id=str(doc_id),
+            error=str(e)
+        )
+        raise HTTPException(status_code=400, detail=str(e))
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("reprocess_failed", error=str(e))
         raise HTTPException(status_code=500, detail=str(e))

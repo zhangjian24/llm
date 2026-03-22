@@ -46,6 +46,10 @@ export const documentAPI = {
   delete: async (id: string): Promise<void> => {
     await api.delete(`/documents/${id}`);
   },
+
+  reprocess: async (id: string): Promise<void> => {
+    await api.post(`/documents/${id}/reprocess`);
+  },
 };
 
 // 对话聊天 API

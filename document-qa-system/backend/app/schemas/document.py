@@ -44,8 +44,8 @@ class DocumentListDTO(BaseModel):
     mime_type: str
     status: str
     chunks_count: Optional[int] = None
-    created_at: datetime
-    updated_at: datetime
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
     
     class Config:
         from_attributes = True

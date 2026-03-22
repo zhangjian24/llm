@@ -179,6 +179,7 @@ class VectorServiceAdapter(VectorServiceInterface):
     
     async def delete_vectors(
         self,
+        session=None,  # 可选的 session 参数
         ids: Optional[List[str]] = None,
         delete_all: bool = False,
         namespace: Optional[str] = None
@@ -192,18 +193,30 @@ class VectorServiceAdapter(VectorServiceInterface):
                 delete_all=delete_all,
                 namespace=namespace
             )
-            
+                
             # 调用具体实现
-            if hasattr(self.service_impl, 'session'):
-                # PostgreSQL 实现
-                from app.core.database import AsyncSessionLocal
-                async with AsyncSessionLocal() as session:
+            if type(self.service_impl).__name__ == 'PostgreSQLVectorService':
+                # PostgreSQL 实现需要 session 和 filter_dict
+                if session is not None:
+                    # 使用传入的 session
+                    filter_dict = {"document_id": namespace} if namespace else None
                     await self.service_impl.delete_vectors(
                         session=session,
                         ids=ids,
                         delete_all=delete_all,
-                        filter_dict={"namespace": namespace} if namespace else None
+                        filter_dict=filter_dict
                     )
+                else:
+                    # 创建新的 session
+                    from app.core.database import AsyncSessionLocal
+                    async with AsyncSessionLocal() as new_session:
+                        filter_dict = {"document_id": namespace} if namespace else None
+                        await self.service_impl.delete_vectors(
+                            session=new_session,
+                            ids=ids,
+                            delete_all=delete_all,
+                            filter_dict=filter_dict
+                        )
             else:
                 # Pinecone 实现
                 await self.service_impl.delete_vectors(
@@ -211,12 +224,12 @@ class VectorServiceAdapter(VectorServiceInterface):
                     delete_all=delete_all,
                     namespace=namespace
                 )
-            
+                
             logger.info(
                 "vector_delete_completed",
                 service_type=self.service_type
             )
-            
+                
         except Exception as e:
             logger.error(
                 "vector_delete_failed",
@@ -224,7 +237,7 @@ class VectorServiceAdapter(VectorServiceInterface):
                 error=str(e),
                 exc_info=True
             )
-            raise RetrievalException(f"向量删除失败[{self.service_type}]：{str(e)}")
+            raise RetrievalException(f"向量删除失败 [{self.service_type}]：{str(e)}")
     
     async def get_index_stats(self) -> Dict[str, Any]:
         """获取索引统计信息 - 适配不同实现的接口差异"""

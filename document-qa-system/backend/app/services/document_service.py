@@ -19,8 +19,7 @@ from app.exceptions import (
     FileTooLargeError,
     UnsupportedFileTypeError,
     DocumentParseError,
-    DocumentNotFoundException,
-    VectorizationException
+    DocumentNotFoundException
 )
 import structlog
 
@@ -236,6 +235,14 @@ class DocumentService:
                     filename=doc.filename
                 )
 
+                # 📢 发送 WebSocket 通知：开始处理
+                from app.websocket_manager import manager
+                await manager.send_document_update(
+                    doc_id=str(doc_id),
+                    status='processing',
+                    filename=doc.filename
+                )
+
                 # 2. 获取文件内容
                 # 📝 关键日志：记录获取文件内容的过程
                 logger.debug(
@@ -246,9 +253,9 @@ class DocumentService:
                     using_repo_method="get_document_content"
                 )
                                 
-                # 注意：这里使用 self.repo 而不是 repo（异步任务中创建的）
-                # 因为 self.repo 是上传时使用的，已经包含了文件内容
-                file_content = await self.repo.get_document_content(doc_id)
+                # 注意：这里使用新创建的 repo（异步任务中创建的）
+                # 因为 self.repo 绑定的是上传时的 session，可能已关闭
+                file_content = await repo.get_document_content(doc_id)
                                 
                 logger.info(
                     "document_content_fetched",
@@ -666,14 +673,14 @@ class DocumentService:
         
         except Exception as e:
             logger.error(
-                "vectorization_failed",
+                "pinecone_upsert_failed",
                 doc_id=str(doc_id),
                 error=str(e),
                 error_type=type(e).__name__,
                 exc_info=True
             )
-            # 关键修复：向量化失败时抛出异常，让上层回滚事务
-            raise VectorizationException(f"文档向量化失败：{str(e)}") from e
+            # 注意：这里不抛出异常，因为数据库已经保存成功
+            # 可以选择重试或将失败信息记录到数据库
 
     async def get_document_list(
         self,
@@ -697,12 +704,348 @@ class DocumentService:
     async def delete_document(self, doc_id: UUID) -> bool:
         """
         删除文档
-
+        
+        处理流程:
+        1. 查询文档
+        2. 从向量数据库删除向量
+        3. 删除数据库记录（级联删除 document_chunks）
+        
         Args:
             doc_id: 文档 ID
-
+            
         Returns:
             bool: 是否删除成功
         """
-        # TODO: 同时删除 Pinecone 中的向量
-        return await self.repo.delete(doc_id)
+        try:
+            # 1. 查询文档
+            doc = await self.repo.find_by_id(doc_id)
+            if not doc:
+                logger.warning(
+                    "document_not_found_for_deletion",
+                    doc_id=str(doc_id)
+                )
+                return False
+            
+            # 1.5 检查文档状态，处理中禁止删除
+            if doc.status == 'processing':
+                logger.warning(
+                    "document_deletion_rejected_processing",
+                    doc_id=str(doc_id),
+                    status=doc.status
+                )
+                raise ValueError("文档处理中，禁止删除")
+            
+            logger.info(
+                "document_deletion_started",
+                doc_id=str(doc_id),
+                filename=doc.filename
+            )
+            
+            # 2. 删除向量数据库中的向量
+            try:
+                logger.debug(
+                    "deleting_vectors_from_vector_db",
+                    doc_id=str(doc_id)
+                )
+                
+                # 使用 vector_service_adapter 删除
+                from app.services.vector_service_adapter import create_vector_service
+                vector_svc = create_vector_service({'vector_store_type': 'postgresql'})
+                
+                # 使用 self.repo 的 session 进行向量删除
+                await vector_svc.delete_vectors(
+                    session=self.repo.session,  # 使用同一个 session
+                    ids=None,
+                    delete_all=False,
+                    namespace=str(doc_id)
+                )
+                
+                logger.info(
+                    "vectors_deleted_successfully",
+                    doc_id=str(doc_id)
+                )
+                
+            except Exception as vector_error:
+                logger.error(
+                    "vector_deletion_failed",
+                    doc_id=str(doc_id),
+                    error=str(vector_error),
+                    error_type=type(vector_error).__name__,
+                    exc_info=True
+                )
+                # 向量删除失败不阻断整个流程，继续删除数据库记录
+            
+            # 3. 删除数据库记录（级联删除 document_chunks）
+            logger.debug(
+                "deleting_document_from_database",
+                doc_id=str(doc_id)
+            )
+            
+            # 在同一个事务中删除向量和文档记录
+            success = await self.repo.delete(doc_id)
+            
+            # 提交事务（包含向量删除和文档删除）
+            if success:
+                await self.repo.session.commit()
+            
+            if success:
+                logger.info(
+                    "document_deleted_successfully",
+                    doc_id=str(doc_id),
+                    filename=doc.filename
+                )
+                
+                # 📢 发送 WebSocket 通知（如果需要）
+                try:
+                    from app.websocket_manager import manager
+                    await manager.send_document_update(
+                        doc_id=str(doc_id),
+                        status='deleted',
+                        filename=doc.filename
+                    )
+                except Exception as ws_error:
+                    logger.warning(
+                        "websocket_notification_failed",
+                        doc_id=str(doc_id),
+                        error=str(ws_error)
+                    )
+            else:
+                logger.error(
+                    "database_deletion_failed",
+                    doc_id=str(doc_id),
+                    filename=doc.filename
+                )
+            
+            return success
+            
+        except Exception as e:
+            logger.error(
+                "delete_document_exception",
+                doc_id=str(doc_id),
+                error=str(e),
+                error_type=type(e).__name__,
+                exc_info=True
+            )
+            return False
+    
+    async def reprocess_document(self, doc_id: UUID) -> bool:
+        """
+        重新处理文档
+        
+        处理流程:
+        1. 查询文档并验证状态
+        2. 清空旧的 chunk 数据和向量
+        3. 重置状态为 processing
+        4. 重新启动异步处理流程
+        
+        Args:
+            doc_id: 文档 ID
+            
+        Returns:
+            bool: 是否成功启动重新处理流程
+            
+        Raises:
+            DocumentNotFoundException: 文档不存在
+            ValueError: 文档状态不允许重新处理
+        """
+        try:
+            # 1. 查询文档
+            doc = await self.repo.find_by_id(doc_id)
+            if not doc:
+                logger.warning(
+                    "document_not_found_for_reprocessing",
+                    doc_id=str(doc_id)
+                )
+                raise DocumentNotFoundException(f"文档不存在：{doc_id}")
+            
+            logger.info(
+                "document_reprocessing_started",
+                doc_id=str(doc_id),
+                filename=doc.filename,
+                current_status=doc.status
+            )
+            
+            # 2. 验证状态（仅允许 failed/ready 状态的文档重新处理）
+            if doc.status not in ['failed', 'ready']:
+                logger.warning(
+                    "invalid_status_for_reprocessing",
+                    doc_id=str(doc_id),
+                    current_status=doc.status,
+                    allowed_statuses=['failed', 'ready']
+                )
+                raise ValueError(
+                    f"当前状态 ({doc.status}) 不允许重新处理，仅支持 failed 或 ready 状态"
+                )
+            
+            # 3. 清空旧的 chunk 数据
+            logger.debug(
+                "clearing_old_chunks",
+                doc_id=str(doc_id)
+            )
+            
+            chunks_cleared = await self._clear_old_chunks(doc_id)
+            if not chunks_cleared:
+                logger.warning(
+                    "clear_chunks_failed_but_continuing",
+                    doc_id=str(doc_id)
+                )
+            
+            # 4. 删除向量数据库中的向量
+            try:
+                logger.debug(
+                    "deleting_vectors_for_reprocessing",
+                    doc_id=str(doc_id)
+                )
+                
+                from app.services.vector_service_adapter import create_vector_service
+                from app.core.database import AsyncSessionLocal
+                vector_svc = create_vector_service({'vector_store_type': 'postgresql'})
+                
+                async with AsyncSessionLocal() as session:
+                    await vector_svc.delete_vectors(
+                        session=session,
+                        ids=None,
+                        delete_all=False,
+                        namespace=str(doc_id)
+                    )
+                    await session.commit()
+                
+                logger.info(
+                    "vectors_deleted_for_reprocessing",
+                    doc_id=str(doc_id)
+                )
+                
+            except Exception as vector_error:
+                logger.error(
+                    "vector_deletion_failed_for_reprocessing",
+                    doc_id=str(doc_id),
+                    error=str(vector_error),
+                    error_type=type(vector_error).__name__,
+                    exc_info=True
+                )
+                # 向量删除失败不阻断整个流程
+            
+            # 5. 重置状态为 processing 并提交
+            logger.debug(
+                "resetting_status_to_processing",
+                doc_id=str(doc_id)
+            )
+            
+            await self.repo.update_status(doc_id, 'processing', chunks_count=None)
+            
+            # 提交状态更新到数据库
+            from app.core.database import AsyncSessionLocal
+            async with AsyncSessionLocal() as commit_session:
+                try:
+                    # 使用新的 session 重新获取文档并更新
+                    from app.repositories.document_repository import DocumentRepository
+                    repo = DocumentRepository(commit_session)
+                    doc_to_update = await repo.find_by_id(doc_id)
+                    if doc_to_update:
+                        doc_to_update.status = 'processing'
+                        doc_to_update.chunks_count = None
+                        await commit_session.commit()
+                        
+                        logger.info(
+                            "status_reset_committed",
+                            doc_id=str(doc_id)
+                        )
+                        
+                        # 6. 启动异步处理任务
+                        logger.info(
+                            "starting_async_reprocessing",
+                            doc_id=str(doc_id),
+                            after_commit=True
+                        )
+                        asyncio.create_task(self._process_document_async(doc_id))
+                        
+                        # 发送 WebSocket 通知
+                        try:
+                            from app.websocket_manager import manager
+                            await manager.send_document_update(
+                                doc_id=str(doc_id),
+                                status='processing',
+                                filename=doc.filename
+                            )
+                        except Exception as ws_error:
+                            logger.warning(
+                                "websocket_notification_failed",
+                                doc_id=str(doc_id),
+                                error=str(ws_error)
+                            )
+                        
+                        return True
+                    else:
+                        logger.error(
+                            "document_not_found_when_resetting",
+                            doc_id=str(doc_id)
+                        )
+                        return False
+                        
+                except Exception as commit_error:
+                    logger.error(
+                        "commit_failed_for_reprocessing",
+                        doc_id=str(doc_id),
+                        error=str(commit_error),
+                        exc_info=True
+                    )
+                    await commit_session.rollback()
+                    raise
+        
+        except DocumentNotFoundException:
+            # 重新抛出文档未找到异常
+            raise
+        except ValueError:
+            # 重新抛出状态非法异常
+            raise
+        except Exception as e:
+            logger.error(
+                "reprocess_document_exception",
+                doc_id=str(doc_id),
+                error=str(e),
+                error_type=type(e).__name__,
+                exc_info=True
+            )
+            return False
+    
+    async def _clear_old_chunks(self, doc_id: UUID) -> bool:
+        """
+        清空旧的 chunk 记录
+        
+        Args:
+            doc_id: 文档 ID
+            
+        Returns:
+            bool: 是否清空成功
+        """
+        try:
+            logger.debug(
+                "clearing_old_chunks",
+                doc_id=str(doc_id)
+            )
+            
+            # 使用 Repository 层方法删除 chunks
+            success = await self.repo.delete_chunks_by_document(doc_id)
+            
+            if success:
+                logger.info(
+                    "old_chunks_cleared",
+                    doc_id=str(doc_id)
+                )
+            else:
+                logger.warning(
+                    "clear_old_chunks_failed",
+                    doc_id=str(doc_id)
+                )
+            
+            return success
+            
+        except Exception as e:
+            logger.error(
+                "clear_old_chunks_exception",
+                doc_id=str(doc_id),
+                error=str(e),
+                error_type=type(e).__name__,
+                exc_info=True
+            )
+            return False

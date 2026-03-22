@@ -14,11 +14,11 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- Step 2: 创建 documents 表（文档元数据）
 CREATE TABLE IF NOT EXISTS documents (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    filename VARCHAR(255) NOT NULL,
+    filename VARCHAR(500) NOT NULL,  -- 扩展为 500 以支持长文件名（包括中文）
     file_content BYTEA,
     content_hash VARCHAR(64) UNIQUE,
     file_size INTEGER NOT NULL,
-    mime_type VARCHAR(50) NOT NULL,
+    mime_type VARCHAR(200) NOT NULL,  -- 扩展为 200 以支持 Office Open XML 等长 MIME 类型
     status VARCHAR(20) NOT NULL DEFAULT 'processing',
     chunks_count INTEGER,
     chunk_count INTEGER,

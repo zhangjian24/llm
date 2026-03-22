@@ -2,7 +2,7 @@
 文档实体模型
 对应数据库的 documents 表
 """
-from sqlalchemy import Column, String, Integer, DateTime, func, LargeBinary
+from sqlalchemy import Column, String, Integer, DateTime, func, LargeBinary, Index
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 from uuid import uuid4
@@ -45,6 +45,14 @@ class Document(Base):
     # 关联关系
     chunks = relationship("Chunk", back_populates="document", cascade="all, delete-orphan")
     document_chunks = relationship("DocumentChunk", back_populates="document", cascade="all, delete-orphan")
+    
+    # 数据库索引配置（优化查询性能）
+    __table_args__ = (
+        # 复合索引：优化按状态筛选 + 时间排序的查询
+        Index('ix_status_created_at', 'status', 'created_at'),
+        # 单字段索引：优化按 MIME 类型筛选
+        Index('ix_mime_type', 'mime_type'),
+    )
     
     def __repr__(self):
         return f"<Document(id={self.id}, filename='{self.filename}', status='{self.status}')>"

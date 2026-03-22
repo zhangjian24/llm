@@ -84,9 +84,9 @@ class PostgreSQLVectorService:
             # pgvector 接受数组格式的向量
             query_vector_str = '[' + ','.join([f'{x:.6f}' for x in query_vector]) + ']'
             
-            sql = text("""
+            sql = text(f"""
                 SELECT id, document_id, chunk_index, content, token_count, embedding, metadata,
-                       (embedding <=> CAST(:query_vector AS VECTOR(1024))) as cosine_distance
+                       (embedding <=> CAST(:query_vector AS VECTOR({self.dimension}))) as cosine_distance
                 FROM chunks 
                 WHERE embedding IS NOT NULL
                 ORDER BY cosine_distance ASC 

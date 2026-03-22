@@ -104,7 +104,7 @@ class DocumentRepository:
     
     async def delete(self, doc_id: UUID) -> bool:
         """
-        删除文档（级联删除 chunks）
+        删除文档（级联删除 chunks 和 document_chunks）
         
         Args:
             doc_id: 文档 ID
@@ -116,7 +116,16 @@ class DocumentRepository:
         if not doc:
             return False
         
+        # SQLAlchemy 会通过 relationship 自动级联删除关联的 chunks
+        # 但需要显式删除 document_chunks 表的记录
+        from sqlalchemy import text
+        await self.session.execute(
+            text("DELETE FROM document_chunks WHERE document_id = :doc_id"),
+            {"doc_id": doc_id}
+        )
+        
         await self.session.delete(doc)
+        await self.session.commit()
         return True
     
     async def update_status(
@@ -293,12 +302,12 @@ class DocumentRepository:
     ) -> bool:
         """
         更新文档内容和哈希
-        
+            
         Args:
-            doc_id: 文档ID
+            doc_id: 文档 ID
             content: 文档二进制内容
             content_hash: 内容哈希
-            
+                
         Returns:
             bool: 是否更新成功
         """
@@ -320,5 +329,35 @@ class DocumentRepository:
             )
             return True
         except Exception as e:
-            print(f"更新文档内容失败: {e}")
+            print(f"更新文档内容失败：{e}")
+            return False
+        
+    async def delete_chunks_by_document(self, doc_id: UUID) -> bool:
+        """
+        删除文档的所有块记录（包括 chunks 表和 document_chunks 表）
+            
+        Args:
+            doc_id: 文档 ID
+                
+        Returns:
+            bool: 是否删除成功
+        """
+        try:
+            from sqlalchemy import text
+                
+            # 删除 document_chunks 表的记录
+            await self.session.execute(
+                text("DELETE FROM document_chunks WHERE document_id = :doc_id"),
+                {"doc_id": doc_id}
+            )
+                
+            # 删除 chunks 表的记录
+            await self.session.execute(
+                text("DELETE FROM chunks WHERE document_id = :doc_id"),
+                {"doc_id": doc_id}
+            )
+                
+            return True
+        except Exception as e:
+            logger.error(f"删除文档块失败：{e}")
             return False

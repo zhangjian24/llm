@@ -31,11 +31,10 @@ class Vector(TypeDecorator):
     def load_dialect_impl(self, dialect):
         """加载方言特定的实现"""
         if dialect.name == 'postgresql':
-            # 对于 PostgreSQL，我们希望使用原生的 VECTOR 类型
-            # 但如果 pgvector 不可用，则回退到 ARRAY(Float)
+            # 对于 PostgreSQL，使用 pgvector 的 VECTOR 类型
             try:
-                from sqlalchemy.dialects.postgresql import VECTOR
-                return dialect.type_descriptor(VECTOR(self.dimension))
+                from pgvector.sqlalchemy import Vector as PGVector
+                return dialect.type_descriptor(PGVector(self.dimension))
             except ImportError:
                 # pgvector 扩展不可用，使用 ARRAY(Float) 作为后备
                 return dialect.type_descriptor(ARRAY(Float, dimensions=1))

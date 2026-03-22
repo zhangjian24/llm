@@ -12,6 +12,7 @@ alembic==1.13.1
 
 # Vector Database
 # PostgreSQL 向量存储 (pgvector)
+pgvector>=0.2.5
 # numpy 用于向量计算和相似度计算
 numpy>=1.24.0
 # SQLAlchemy 向量类型支持

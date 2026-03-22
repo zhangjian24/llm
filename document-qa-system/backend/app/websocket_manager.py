@@ -94,8 +94,19 @@ class ConnectionManager:
             chunks_count: 分块数量
             filename: 文件名（可选）
         """
+        # 根据状态映射到不同的消息类型
+        message_type_map = {
+            'processing': 'document.processing',
+            'ready': 'document.completed',
+            'failed': 'document.failed',
+            'uploaded': 'document.uploaded',
+            'deleted': 'document.deleted'
+        }
+        
+        message_type = message_type_map.get(status, 'document_status_updated')
+        
         message = {
-            "type": "document_status_updated",
+            "type": message_type,
             "doc_id": doc_id,
             "status": status,
             "chunks_count": chunks_count,
@@ -109,6 +120,7 @@ class ConnectionManager:
             "broadcasting_document_update",
             doc_id=doc_id,
             status=status,
+            message_type=message_type,
             chunks_count=chunks_count
         )
         

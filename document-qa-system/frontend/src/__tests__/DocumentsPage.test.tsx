@@ -12,6 +12,12 @@ jest.mock('../services/api', () => ({
   },
 }));
 
+// 声明 global 类型
+declare const global: typeof globalThis & {
+  confirm: typeof confirm;
+  WebSocket: typeof WebSocket;
+};
+
 describe('DocumentsPage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -132,7 +138,6 @@ describe('DocumentsPage', () => {
 
     // Act
     const deleteButton = screen.getByTestId('delete-button');
-    global.confirm = jest.fn(() => true);
     deleteButton.click();
     
     // Assert
@@ -157,10 +162,8 @@ describe('DocumentsPage', () => {
     
     // Act
     const statusFilter = screen.getByTestId('status-filter');
-    await require('@testing-library/user-event').default.selectOptions(
-      statusFilter,
-      'failed'
-    );
+    const userEvent = (await import('@testing-library/user-event')).default;
+    await userEvent.selectOptions(statusFilter, 'failed');
     
     // Assert
     expect(documentAPI.getList).toHaveBeenCalledWith(1, 20, 'failed');

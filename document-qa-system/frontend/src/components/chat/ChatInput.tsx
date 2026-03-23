@@ -5,7 +5,15 @@ import type { Message } from '../../types';
 
 export const ChatInput: React.FC = () => {
   const [input, setInput] = useState('');
-  const { addMessage, updateLastAssistantMessage, setCurrentConversation, setLoading, setError } = useChatStore();
+  const { 
+    addMessage, 
+    updateLastAssistantMessage, 
+    setCurrentConversation, 
+    setLoading, 
+    setError,
+    currentConversationId,
+    fetchConversations
+  } = useChatStore();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -32,9 +40,14 @@ export const ChatInput: React.FC = () => {
         created_at: new Date().toISOString()
       });
 
-      // 使用流式 API
+      // 使用流式 API，传入当前对话 ID
       await chatAPI.chatStream(
-        { query: input.trim(), top_k: 5, stream: true },
+        { 
+          query: input.trim(), 
+          top_k: 5, 
+          stream: true,
+          conversation_id: currentConversationId || undefined
+        },
         (token) => {
           // 实时更新助手消息内容
           updateLastAssistantMessage(token);
@@ -42,6 +55,11 @@ export const ChatInput: React.FC = () => {
         (conversationId) => {
           setCurrentConversation(conversationId);
           setLoading(false);
+          // 刷新对话列表以显示新对话或更新时间
+          fetchConversations();
+          // 保存消息到本地存储
+          const currentMessages = useChatStore.getState().messages;
+          localStorage.setItem(`conversation_${conversationId}`, JSON.stringify(currentMessages));
         },
         (error) => {
           setError(error);

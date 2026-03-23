@@ -8,10 +8,7 @@ const App: React.FC = () => {
   const { setDocuments, setError } = useDocumentStore();
   
   // 📡 初始化 WebSocket 连接
-  const { isConnected } = useWebSocket('ws://localhost:8000/ws');
-  
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const connectionStatus = isConnected; // 保留连接状态以供未来使用
+  useWebSocket('ws://localhost:8000/ws');
   
   // 提取文档加载逻辑为独立函数
   const loadDocuments = async () => {

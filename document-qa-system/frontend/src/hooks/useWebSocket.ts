@@ -26,7 +26,7 @@ export const useWebSocket = (url: string) => {
   const ws = useRef<WebSocket | null>(null);
   const reconnectTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reconnectAttempts = useRef(0); // 重连次数计数器
-  const { updateDocumentStatus, addDocument, removeDocument } = useDocumentStore();
+  const { updateDocumentStatus, removeDocument } = useDocumentStore();
 
   // 指数退避策略计算延迟
   const calculateBackoffDelay = useCallback((attempt: number): number => {

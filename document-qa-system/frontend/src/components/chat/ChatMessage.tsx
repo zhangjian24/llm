@@ -1,5 +1,4 @@
 import React from 'react';
-import { useChatStore } from '../../stores/chatStore';
 import type { Message } from '../../types';
 
 interface ChatMessageProps {

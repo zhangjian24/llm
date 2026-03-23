@@ -50,6 +50,13 @@ const mockWebSocket = {
   send: jest.fn(),
   close: jest.fn(),
   readyState: WebSocket.OPEN,
+  onmessage: null as ((event: MessageEvent) => void) | null,
+  onclose: null as ((event: CloseEvent) => void) | null,
+};
+
+// 声明 global 类型
+declare const global: typeof globalThis & {
+  WebSocket: typeof WebSocket;
 };
 
 const mockWebSocketConstructor = jest.fn(() => mockWebSocket);
@@ -145,7 +152,9 @@ describe('文档状态更新集成测试', () => {
       const messageEvent = new MessageEvent('message', {
         data: JSON.stringify(mockMessage)
       });
-      mockWebSocket.onmessage?.(messageEvent as any);
+      if (mockWebSocket.onmessage) {
+        mockWebSocket.onmessage(messageEvent);
+      }
     });
     
     // 检查UI状态更新
@@ -182,7 +191,9 @@ describe('文档状态更新集成测试', () => {
       const messageEvent = new MessageEvent('message', {
         data: JSON.stringify(newDocumentMessage)
       });
-      mockWebSocket.onmessage?.(messageEvent as any);
+      if (mockWebSocket.onmessage) {
+        mockWebSocket.onmessage(messageEvent);
+      }
     });
     
     // 检查文档计数更新
@@ -209,7 +220,9 @@ describe('文档状态更新集成测试', () => {
         code: 1006,
         reason: 'Connection lost'
       });
-      mockWebSocket.onclose?.(closeEvent as any);
+      if (mockWebSocket.onclose) {
+        mockWebSocket.onclose(closeEvent);
+      }
     });
     
     // 检查显示离线模式
@@ -270,7 +283,9 @@ describe('文档状态更新集成测试', () => {
         code: 1006,
         reason: 'Connection lost'
       });
-      mockWebSocket.onclose?.(closeEvent as any);
+      if (mockWebSocket.onclose) {
+        mockWebSocket.onclose(closeEvent);
+      }
     });
     
     // 检查进入离线模式

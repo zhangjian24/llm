@@ -6,6 +6,11 @@
 import { useDocumentStore } from '../stores/documentStore';
 import { act, renderHook } from '@testing-library/react';
 
+// 声明 global 类型
+declare const global: typeof globalThis & {
+  WebSocket: typeof WebSocket;
+};
+
 // Mock WebSocket
 global.WebSocket = jest.fn(() => ({
   send: jest.fn(),

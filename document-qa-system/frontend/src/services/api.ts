@@ -1,6 +1,5 @@
 import axios from 'axios';
 import type { 
-  Document, 
   DocumentUploadResponse, 
   DocumentListResponse,
   ChatQuery,

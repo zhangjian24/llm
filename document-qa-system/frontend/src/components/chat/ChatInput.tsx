@@ -12,7 +12,7 @@ export const ChatInput: React.FC = () => {
     setLoading, 
     setError,
     currentConversationId,
-    fetchConversations
+    updateConversationAfterMessage
   } = useChatStore();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -55,8 +55,8 @@ export const ChatInput: React.FC = () => {
         (conversationId) => {
           setCurrentConversation(conversationId);
           setLoading(false);
-          // 刷新对话列表以显示新对话或更新时间
-          fetchConversations();
+          // 更新会话列表（不刷新整个列表）
+          updateConversationAfterMessage(conversationId, input.trim());
           // 保存消息到本地存储
           const currentMessages = useChatStore.getState().messages;
           localStorage.setItem(`conversation_${conversationId}`, JSON.stringify(currentMessages));

@@ -29,7 +29,8 @@ interface ChatState {
   deleteConversation: (id: string) => Promise<void>;
   toggleSidebar: () => void;
   setSidebarOpen: (open: boolean) => void;
-  loadConversationMessages: (messages: Message[], conversationId: string) => void;
+  // 发送消息后更新对话列表（不刷新整个列表）
+  updateConversationAfterMessage: (conversationId: string, firstMessage: string) => void;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -152,11 +153,36 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set({ isSidebarOpen: open });
   },
 
-  loadConversationMessages: (messages, conversationId) => {
-    set({ 
-      messages,
-      currentConversationId: conversationId 
-    });
-    localStorage.setItem(`conversation_${conversationId}`, JSON.stringify(messages));
-  },
+  // 发送消息后更新对话列表（不刷新整个列表）
+  updateConversationAfterMessage: (conversationId, firstMessage) =>
+    set((state) => {
+      const now = new Date().toISOString();
+      const existingIndex = state.conversations.findIndex(c => c.id === conversationId);
+      
+      if (existingIndex === -1) {
+        // 新对话：添加到列表头部
+        const newConversation: Conversation = {
+          id: conversationId,
+          title: firstMessage.slice(0, 50) || '新对话',
+          last_message: firstMessage.slice(0, 100),
+          turns: 1,
+          updated_at: now,
+        };
+        return {
+          conversations: [newConversation, ...state.conversations]
+        };
+      } else {
+        // 已有对话：更新并移到顶部
+        const updatedConversation = {
+          ...state.conversations[existingIndex],
+          updated_at: now,
+          turns: (state.conversations[existingIndex].turns || 0) + 1,
+        };
+        const newConversations = [
+          updatedConversation,
+          ...state.conversations.filter(c => c.id !== conversationId)
+        ];
+        return { conversations: newConversations };
+      }
+    }),
 }));

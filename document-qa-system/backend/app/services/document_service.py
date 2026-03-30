@@ -664,12 +664,13 @@ class DocumentService:
                     doc_id=str(doc_id),
                     vectors_count=len(vectors)
                 )
-            else:
+            elif not vectors and len(chunks) > 0:
                 logger.warning(
                     "no_vectors_to_upsert",
                     doc_id=str(doc_id),
                     reason="embedding_failed_for_all_chunks"
                 )
+                raise RetrievalException(f"文档向量化失败：所有 chunk 的 embedding 失败")
         
         except Exception as e:
             logger.error(
@@ -679,8 +680,7 @@ class DocumentService:
                 error_type=type(e).__name__,
                 exc_info=True
             )
-            # 注意：这里不抛出异常，因为数据库已经保存成功
-            # 可以选择重试或将失败信息记录到数据库
+            raise RetrievalException(f"文档向量化失败：{str(e)}")
 
     async def get_document_list(
         self,

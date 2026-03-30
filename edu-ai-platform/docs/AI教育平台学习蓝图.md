@@ -373,40 +373,5 @@ Java基础   业务开发    分布式     LLM接入    RAG        基础Agent  
            +DB设计    +事务      +Prompt    +向量       +LangChain  +多Agent    +网关       +多端
 ```
 
----
-
-## 十三、v0.1 阶段执行计划
-
-### 阶段目标
-搭建完整技术底座：Spring Boot + Nacos + uni-app，实现用户/权限系统
-
-### 每日任务（2周）
-
-**第1周**
-
-| Day | 任务 | 产出 |
-|-----|------|------|
-| 1 | 环境准备：JDK17、Maven、Node18、IDE配置 | 开发环境就绪 |
-| 2 | 创建父项目：Maven多模块结构 | edu-ai-platform 仓库 |
-| 3 | 用户服务搭建：Spring Boot + MyBatis-Plus | edu-user-service 基础代码 |
-| 4 | Nacos服务搭建：Docker Compose | Nacos本地环境 |
-| 5 | 服务注册：用户服务接入Nacos | 服务注册成功 |
-| 6 | OpenAPI文档 + 博客大纲 | 第1-2篇博客素材 |
-| 7 | 休息 | - |
-
-**第2周**
-
-| Day | 任务 | 产出 |
-|-----|------|------|
-| 8 | JWT鉴权：JJWT + Redis | 登录/注册API完成 |
-| 9 | uni-app项目初始化 + TailwindCSS | edu-web 基础结构 |
-| 10 | uView Plus集成 + 登录页面 | 前端登录页完成 |
-| 11 | 权限模块：RBAC设计 | 角色/权限表设计 |
-| 12 | OpenFeign服务调用 | 内部服务通信 |
-| 13 | 博客撰写：Spring Boot原理 + Nacos原理 | 2篇原理博客 |
-| 14 | 博客撰写：实战项目2篇 | 2篇实战博客 |
-
----
-
 **蓝图版本**：v6.0
 **更新时间**：2026-03-30

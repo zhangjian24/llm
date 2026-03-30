@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     
     # 向量存储配置（PostgreSQL pgvector）
     # 向量维度（需与 embedding 模型输出维度一致）
+    # text-embedding-v4 输出 1024 维向量
     VECTOR_DIMENSION: int = 1024
     # 向量索引类型（hnsw 或 ivfflat）
     VECTOR_INDEX_TYPE: str = "hnsw"

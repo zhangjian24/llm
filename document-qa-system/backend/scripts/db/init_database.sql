@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS chunks (
     chunk_index INTEGER NOT NULL,
     content TEXT NOT NULL,
     token_count INTEGER NOT NULL,
-    embedding vector(1536),
+    embedding vector(1024),
     metadata JSONB
 );
 

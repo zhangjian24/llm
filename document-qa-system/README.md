@@ -91,10 +91,10 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 cd frontend
 
 # 1. 安装依赖
-npm install
+pnpm install
 
 # 2. 启动开发服务器
-npm run dev
+pnpm run dev
 ```
 
 访问 http://localhost:5173

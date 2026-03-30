@@ -11,6 +11,9 @@
 -- Step 1: 启用必要扩展
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+-- Step 1.5: 启用 pgvector 向量扩展（用于向量相似度搜索）
+CREATE EXTENSION IF NOT EXISTS vector;
+
 -- Step 2: 创建 documents 表（文档元数据）
 CREATE TABLE IF NOT EXISTS documents (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

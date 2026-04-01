@@ -4,7 +4,7 @@ export interface Document {
   filename: string;
   file_size: number;
   mime_type: string;
-  status: 'processing' | 'ready' | 'failed';
+  status: 'processing' | 'ready' | 'failed' | 'chunked' | 'deleted';
   chunks_count?: number;
   created_at: string;
   updated_at: string;

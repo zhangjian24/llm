@@ -350,23 +350,18 @@ class RAGService:
                 history_parts.append(f"{role}: {msg.get('content', '')}")
             history_text = "\n".join(history_parts) + "\n\n"
         
-        # 构建系统指令
-        system_prompt = f"""你是一个专业的文档问答助手。请根据以下文档片段回答问题。
+        # 构建系统指令 (优化版 - 精简指令)
+        system_prompt = f"""你是一个专业的文档问答助手。
 
-【相关文档】
-{context_text}
+要求：
+1. 只基于【文档内容】回答，不要编造
+2. 如需引用，格式：[来源X]
+3. 回答简洁，不超过3句话
+4. 不知道的问题明确说明
 
-【对话历史】
-{history_text}
-
-【用户问题】
-{question}
-
-请用中文回答，并确保：
-1. 基于文档内容回答，不要编造信息
-2. 如果文档中没有相关信息，请说明
-3. 回答要准确、简洁、有条理
-4. 必要时可以引用文档来源
+【文档】{context_text}
+【历史】{history_text}
+【问题】{question}
 
 回答："""
         
@@ -383,7 +378,7 @@ class RAGService:
             str: 流式输出的 token
         """
         try:
-            async with httpx.AsyncClient(timeout=60.0) as client:
+            async with httpx.AsyncClient(timeout=settings.LLM_TIMEOUT_SECONDS) as client:
                 response = await client.post(
                     f"{self.llm_base_url}/chat/completions",
                     headers={
@@ -393,7 +388,9 @@ class RAGService:
                     json={
                         "model": self.llm_model,
                         "messages": [{"role": "user", "content": prompt}],
-                        "stream": True
+                        "stream": True,
+                        "max_tokens": 200,  # 限制生成token数量
+                        "temperature": 0.3  # 降低随机性
                     }
                 )
                 

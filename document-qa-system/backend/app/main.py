@@ -4,6 +4,7 @@ FastAPI 应用主入口
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+from starlette.websockets import WebSocketDisconnect
 from app.core.database import init_db, close_db
 from app.core.config import get_settings
 from app.utils.logger import setup_logging
@@ -99,6 +100,13 @@ async def websocket_endpoint(websocket: WebSocket):
             # 这里暂时只记录日志
             logger.debug("websocket_message_received", message=data)
             
+    except WebSocketDisconnect as e:
+        logger.info(
+            "websocket_disconnected",
+            connection_id=connection_id,
+            code=e.code,
+            reason=e.reason
+        )
     except Exception as e:
         logger.error(
             "websocket_error",

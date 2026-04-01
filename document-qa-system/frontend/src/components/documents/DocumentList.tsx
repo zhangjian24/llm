@@ -51,8 +51,10 @@ export const DocumentList: React.FC<DocumentListProps> = ({
       processing: { color: 'bg-yellow-100 text-yellow-800', label: '⏳ 处理中' },
       ready: { color: 'bg-green-100 text-green-800', label: '✅ 就绪' },
       failed: { color: 'bg-red-100 text-red-800', label: '❌ 失败' },
+      chunked: { color: 'bg-blue-100 text-blue-800', label: '📦 已分块' },
+      deleted: { color: 'bg-gray-100 text-gray-800', label: '🗑️ 已删除' },
     };
-    const config = statusConfig[status];
+    const config = statusConfig[status] || statusConfig.processing;
     return (
       <span className={`px-2 py-1 rounded-full text-xs font-medium ${config.color}`} data-testid="status-badge">
         {config.label}

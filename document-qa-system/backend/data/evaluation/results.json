@@ -1,0 +1,102 @@
+[
+  {
+    "question": "什么是人工智能？",
+    "answer": "人工智能（Artificial Intelligence，简称 AI）是计算机科学的一个重要分支，致力于创建能够模拟人类智能的系统，这些系统可以学习、推理、感知和理解语言，从而执行需要人类智慧的任务。[来源1]",
+    "faithfulness": 1.0,
+    "answer_relevancy": 1.0,
+    "context_precision": 1.0,
+    "context_recall": 1.0,
+    "retrieval_latency_ms": 439.26515500061214,
+    "generation_latency_ms": 6839.632939983858
+  },
+  {
+    "question": "机器学习有哪些类型？",
+    "answer": "机器学习主要分为三种类型：监督学习、无监督学习和强化学习。[来源1]",
+    "faithfulness": 1.0,
+    "answer_relevancy": 1.0,
+    "context_precision": 1.0,
+    "context_recall": 1.0,
+    "retrieval_latency_ms": 341.5183830074966,
+    "generation_latency_ms": 2819.238388998201
+  },
+  {
+    "question": "什么是监督学习？",
+    "answer": "监督学习是一种机器学习方法，它使用带有标签的训练数据进行学习，适用于分类和回归任务。[来源1] 常见算法包括线性回归、决策树和支持向量机等。",
+    "faithfulness": 1.0,
+    "answer_relevancy": 1.0,
+    "context_precision": 1.0,
+    "context_recall": 1.0,
+    "retrieval_latency_ms": 365.28240199550055,
+    "generation_latency_ms": 5564.398588001495
+  },
+  {
+    "question": "什么是无监督学习？",
+    "answer": "无监督学习是机器学习的一种类型，它从未标记的数据中发现模式和结构。这种学习方式不需要标签数据，常见算法包括聚类、降维等。[来源 2]",
+    "faithfulness": 1.0,
+    "answer_relevancy": 1.0,
+    "context_precision": 1.0,
+    "context_recall": 1.0,
+    "retrieval_latency_ms": 416.33215997717343,
+    "generation_latency_ms": 7499.01374001638
+  },
+  {
+    "question": "强化学习与监督学习有什么区别？",
+    "answer": "强化学习通过与环境交互来学习采取行动以最大化奖励，而监督学习则是使用带标签的数据进行训练，适用于分类和回归任务。[来源 2]",
+    "faithfulness": 1.0,
+    "answer_relevancy": 1.0,
+    "context_precision": 1.0,
+    "context_recall": 1.0,
+    "retrieval_latency_ms": 355.0014049978927,
+    "generation_latency_ms": 4103.685038979165
+  },
+  {
+    "question": "深度学习和机器学习有什么区别？",
+    "answer": "深度学习是机器学习的一个子集，它使用多层神经网络来模拟复杂的数据模式。相比其他机器学习方法，深度学习特别擅长处理图像、文本等非结构化数据，并能自动提取高级特征。[来源1][来源2]",
+    "faithfulness": 1.0,
+    "answer_relevancy": 1.0,
+    "context_precision": 1.0,
+    "context_recall": 1.0,
+    "retrieval_latency_ms": 334.08974498161115,
+    "generation_latency_ms": 7041.849130997434
+  },
+  {
+    "question": "什么是RAG？",
+    "answer": "RAG即检索增强生成，是一种结合了信息检索和文本生成的技术，它利用外部知识库来提高语言模型的回答质量。[来源1]",
+    "faithfulness": 1.0,
+    "answer_relevancy": 1.0,
+    "context_precision": 1.0,
+    "context_recall": 1.0,
+    "retrieval_latency_ms": 437.485350004863,
+    "generation_latency_ms": 5702.476686972659
+  },
+  {
+    "question": "RAG系统由哪些部分组成？",
+    "answer": "RAG系统主要由信息检索和文本生成两部分组成，其中涉及的关键组件包括向量数据库、Embedding技术、HNSW索引算法、混合搜索机制、模型路由策略以及缓存机制。[来源1]",
+    "faithfulness": 1.0,
+    "answer_relevancy": 1.0,
+    "context_precision": 1.0,
+    "context_recall": 0.25,
+    "retrieval_latency_ms": 344.3244750087615,
+    "generation_latency_ms": 7248.859407991404
+  },
+  {
+    "question": "向量数据库有什么作用？",
+    "answer": "向量数据库用于存储和检索高维向量表示，在RAG系统中支持高效的知识检索。[来源1]",
+    "faithfulness": 1.0,
+    "answer_relevancy": 1.0,
+    "context_precision": 1.0,
+    "context_recall": 1.0,
+    "retrieval_latency_ms": 466.9677589845378,
+    "generation_latency_ms": 6366.297494008904
+  },
+  {
+    "question": "什么是Embedding？",
+    "answer": "Embedding是将文本转换为稠密向量表示的技术，这样可以使得语义相似的内容在向量空间中彼此接近。[来源1]",
+    "faithfulness": 1.0,
+    "answer_relevancy": 1.0,
+    "context_precision": 1.0,
+    "context_recall": 0.25,
+    "retrieval_latency_ms": 658.1603049999103,
+    "generation_latency_ms": 3564.321126003051
+  }
+]

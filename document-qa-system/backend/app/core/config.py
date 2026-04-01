@@ -39,17 +39,23 @@ class Settings(BaseSettings):
     OPENAI_BASE_URL: str = ""
     
     # 模型配置
-    LLM_MODEL: str = "qwen-max"
+    LLM_MODEL: str = "qwen-turbo"  # 使用turbo模型（比flash更准，比max更快）
     EMBEDDING_MODEL: str = "text-embedding-v4"
-    RERANK_MODEL: str = "rerank-v3"
+    RERANK_MODEL: str = "qwen3-rerank"
+    
+    # LLM 超时配置
+    LLM_TIMEOUT_SECONDS: int = 4  # 生成超时4秒
     
     # RAG 配置
-    CHUNK_SIZE: int = 800
-    CHUNK_OVERLAP: int = 150
-    RAG_TOP_K: int = 10
-    RERANK_TOP_K: int = 5
-    RELEVANCE_THRESHOLD: float = 0.3  # ✅ 降低阈值，允许更多结果返回
-    MAX_RETRIEVAL_DOCS: int = 10
+    CHUNK_SIZE: int = 600
+    CHUNK_OVERLAP: int = 200
+    RAG_TOP_K: int = 15  # 平衡检索数量
+    RERANK_TOP_K: int = 6  # 平衡rerank数量
+    RELEVANCE_THRESHOLD: float = 0.08  # 降低阈值
+    MAX_RETRIEVAL_DOCS: int = 15
+    
+    # LLM 超时配置
+    LLM_TIMEOUT_SECONDS: int = 8  # 生成超时8秒
     
     # 文件上传配置
     MAX_FILE_SIZE_MB: int = 50

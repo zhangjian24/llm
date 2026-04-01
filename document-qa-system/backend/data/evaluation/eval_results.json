@@ -1,0 +1,32 @@
+[
+  {
+    "question": "什么是人工智能？",
+    "answer": "人工智能是计算机科学的一个重要分支，致力于创建能够模拟人类智能的系统，这些系统可以学习、推理、感知和理解语言，从而执行需要人类智慧的任务。[来源1]",
+    "faithfulness": 0.6,
+    "answer_relevancy": 0.5,
+    "context_precision": 0.3333333333333333,
+    "context_recall": 0.0,
+    "retrieval_latency_ms": 511.73328500590287,
+    "generation_latency_ms": 3616.783924982883
+  },
+  {
+    "question": "机器学习有哪些类型？",
+    "answer": "机器学习主要分为三种类型：监督学习、无监督学习和强化学习。[来源1]",
+    "faithfulness": 0.6,
+    "answer_relevancy": 0.5,
+    "context_precision": 0.0,
+    "context_recall": 0.3333333333333333,
+    "retrieval_latency_ms": 384.9680330022238,
+    "generation_latency_ms": 3255.00386900967
+  },
+  {
+    "question": "什么是监督学习？",
+    "answer": "监督学习是一种机器学习方法，它使用带有标签的训练数据进行学习，适用于分类和回归任务。[来源1]",
+    "faithfulness": 0.6,
+    "answer_relevancy": 0.5,
+    "context_precision": 0.0,
+    "context_recall": 0.0,
+    "retrieval_latency_ms": 455.44368601986207,
+    "generation_latency_ms": 3421.4278209838085
+  }
+]

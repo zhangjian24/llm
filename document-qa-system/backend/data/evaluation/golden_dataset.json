@@ -1,0 +1,352 @@
+[
+  {
+    "id": "golden_001",
+    "question": "什么是人工智能？",
+    "ground_truth": "人工智能是计算机科学的一个重要分支，致力于开发能够模拟、延伸和扩展人类智能的理论、方法、技术及应用系统。",
+    "complexity": "simple",
+    "category": "概念解释"
+  },
+  {
+    "id": "golden_002",
+    "question": "机器学习有哪些类型？",
+    "ground_truth": "机器学习主要包括三种类型：监督学习、无监督学习和强化学习。",
+    "complexity": "simple",
+    "category": "知识问答"
+  },
+  {
+    "id": "golden_003",
+    "question": "深度学习和机器学习有什么区别？",
+    "ground_truth": "深度学习是机器学习的一个分支，使用多层神经网络来学习数据的特征表示。机器学习是更广泛的领域，包括深度学习以及其他算法。",
+    "complexity": "medium",
+    "category": "对比分析"
+  },
+  {
+    "id": "golden_004",
+    "question": "什么是自然语言处理？",
+    "ground_truth": "自然语言处理是人工智能的一个分支领域，研究如何让计算机理解、解释和生成人类语言。",
+    "complexity": "simple",
+    "category": "概念解释"
+  },
+  {
+    "id": "golden_005",
+    "question": "神经网络是如何工作的？",
+    "ground_truth": "神经网络由多个层级的神经元组成，通过加权连接进行信息传递，使用激活函数引入非线性变换，通过反向传播算法进行训练。",
+    "complexity": "medium",
+    "category": "原理说明"
+  },
+  {
+    "id": "golden_006",
+    "question": "什么是监督学习？",
+    "ground_truth": "监督学习是机器学习的一种方法，使用带有标签的训练数据来训练模型，使模型能够预测新的未知数据的标签。",
+    "complexity": "simple",
+    "category": "概念解释"
+  },
+  {
+    "id": "golden_007",
+    "question": "什么是无监督学习？",
+    "ground_truth": "无监督学习是机器学习的一种方法，使用不带标签的训练数据，使模型能够发现数据中的隐藏模式和结构。",
+    "complexity": "simple",
+    "category": "概念解释"
+  },
+  {
+    "id": "golden_008",
+    "question": "强化学习与监督学习有什么区别？",
+    "ground_truth": "强化学习通过与环境的交互和奖励信号来学习最优策略，而监督学习通过带标签的数据来学习输入到输出的映射。",
+    "complexity": "medium",
+    "category": "对比分析"
+  },
+  {
+    "id": "golden_009",
+    "question": "什么是卷积神经网络？",
+    "ground_truth": "卷积神经网络是一种深度学习架构，主要用于处理图像数据，使用卷积层来自动学习空间层级特征。",
+    "complexity": "medium",
+    "category": "概念解释"
+  },
+  {
+    "id": "golden_010",
+    "question": "什么是循环神经网络？",
+    "ground_truth": "循环神经网络是一种能够处理序列数据的神经网络，通过循环连接来保存之前的信息，适用于时间序列和自然语言处理任务。",
+    "complexity": "medium",
+    "category": "概念解释"
+  },
+  {
+    "id": "golden_011",
+    "question": "Transformer为什么在NLP中如此重要？",
+    "ground_truth": "Transformer通过自注意力机制能够并行处理序列中的所有位置，解决了循环神经网络的并行化问题和长距离依赖问题。",
+    "complexity": "medium",
+    "category": "原理说明"
+  },
+  {
+    "id": "golden_012",
+    "question": "什么是注意力机制？",
+    "ground_truth": "注意力机制允许模型在处理输入时动态地关注最相关的部分，模拟人类选择性注意的能力。",
+    "complexity": "medium",
+    "category": "概念解释"
+  },
+  {
+    "id": "golden_013",
+    "question": "什么是过拟合？如何避免？",
+    "ground_truth": "过拟合是指模型在训练数据上表现很好但在测试数据上表现差。可以通过正则化、数据增强、交叉验证和早停等方法来避免。",
+    "complexity": "medium",
+    "category": "问题解决"
+  },
+  {
+    "id": "golden_014",
+    "question": "什么是欠拟合？",
+    "ground_truth": "欠拟合是指模型既不能在训练数据上表现良好，也不能在测试数据上表现良好，通常是因为模型太简单或训练不足。",
+    "complexity": "simple",
+    "category": "概念解释"
+  },
+  {
+    "id": "golden_015",
+    "question": "什么是正则化？",
+    "ground_truth": "正则化是一种用于防止过拟合的技术，通过在损失函数中添加惩罚项来限制模型的复杂度。",
+    "complexity": "medium",
+    "category": "概念解释"
+  },
+  {
+    "id": "golden_016",
+    "question": "Dropout有什么作用？",
+    "ground_truth": "Dropout是一种正则化技术，在训练过程中随机将一部分神经元的输出置为0，防止神经元之间形成过度依赖，提高模型的泛化能力。",
+    "complexity": "medium",
+    "category": "原理说明"
+  },
+  {
+    "id": "golden_017",
+    "question": "什么是梯度下降？",
+    "ground_truth": "梯度下降是一种优化算法，通过计算损失函数相对于参数的梯度，沿着梯度的负方向更新参数，以最小化损失函数。",
+    "complexity": "medium",
+    "category": "原理说明"
+  },
+  {
+    "id": "golden_018",
+    "question": "反向传播是什么？",
+    "ground_truth": "反向传播是神经网络训练中的核心算法，通过从输出层到输入层逐层计算梯度，将误差信号传递给前面的层来更新参数。",
+    "complexity": "medium",
+    "category": "原理说明"
+  },
+  {
+    "id": "golden_019",
+    "question": "什么是损失函数？",
+    "ground_truth": "损失函数是用于衡量模型预测值与真实值之间差距的函数，训练目标是最小化这个损失值。",
+    "complexity": "simple",
+    "category": "概念解释"
+  },
+  {
+    "id": "golden_020",
+    "question": "什么是交叉熵损失？",
+    "ground_truth": "交叉熵损失是分类任务中常用的损失函数，衡量模型预测的概率分布与真实概率分布之间的差异。",
+    "complexity": "medium",
+    "category": "概念解释"
+  },
+  {
+    "id": "golden_021",
+    "question": "什么是激活函数？",
+    "ground_truth": "激活函数是神经网络中的非线性函数，用于引入非线性变换，使网络能够学习复杂的模式。常见的激活函数包括ReLU、Sigmoid和Tanh。",
+    "complexity": "medium",
+    "category": "概念解释"
+  },
+  {
+    "id": "golden_022",
+    "question": "ReLU激活函数有什么优点？",
+    "ground_truth": "ReLU函数的计算简单，能够缓解梯度消失问题，在实际应用中表现优秀，是目前最常用的激活函数之一。",
+    "complexity": "medium",
+    "category": "原理说明"
+  },
+  {
+    "id": "golden_023",
+    "question": "什么是批量归一化？",
+    "ground_truth": "批量归一化是在神经网络中对每一批数据进行归一化处理，使每层的输入保持稳定的分布，能够加速训练并提高稳定性。",
+    "complexity": "medium",
+    "category": "概念解释"
+  },
+  {
+    "id": "golden_024",
+    "question": "什么是学习率？",
+    "ground_truth": "学习率是梯度下降算法中的超参数，控制每一步参数更新的幅度，决定了训练的收敛速度和稳定性。",
+    "complexity": "simple",
+    "category": "概念解释"
+  },
+  {
+    "id": "golden_025",
+    "question": "如何调整学习率？",
+    "ground_truth": "学习率可以通过固定值、衰减策略、自适应方法（如Adam）等方式进行调整。",
+    "complexity": "medium",
+    "category": "方法说明"
+  },
+  {
+    "id": "golden_026",
+    "question": "什么是Adam优化器？",
+    "ground_truth": "Adam是一种自适应学习率优化算法，结合了动量方法和RMSProp的优点，能够为不同参数自适应调整学习率。",
+    "complexity": "medium",
+    "category": "概念解释"
+  },
+  {
+    "id": "golden_027",
+    "question": "什么是迁移学习？",
+    "ground_truth": "迁移学习是一种机器学习技术，利用在一个任务上学到的知识来帮助解决另一个相关任务，通常通过微调预训练模型实现。",
+    "complexity": "medium",
+    "category": "概念解释"
+  },
+  {
+    "id": "golden_028",
+    "question": "什么是数据增强？",
+    "ground_truth": "数据增强是通过对原始数据进行变换（如旋转、裁剪、颜色调整等）来增加训练数据量的技术，能够提高模型的泛化能力。",
+    "complexity": "simple",
+    "category": "概念解释"
+  },
+  {
+    "id": "golden_029",
+    "question": "什么是模型集成？",
+    "ground_truth": "模型集成是组合多个模型的预测结果来提高整体性能的技术，常见方法包括投票、平均和堆叠。",
+    "complexity": "medium",
+    "category": "概念解释"
+  },
+  {
+    "id": "golden_030",
+    "question": "什么是准确率？",
+    "ground_truth": "准确率是分类正确的样本数除以总样本数，是评估分类模型最基本的指标。",
+    "complexity": "simple",
+    "category": "指标说明"
+  },
+  {
+    "id": "golden_031",
+    "question": "什么是精确率和召回率？",
+    "ground_truth": "精确率是预测为正类的样本中真正为正类的比例，召回率是所有正类样本中被正确预测的比例。",
+    "complexity": "medium",
+    "category": "指标说明"
+  },
+  {
+    "id": "golden_032",
+    "question": "什么是F1分数？",
+    "ground_truth": "F1分数是精确率和召回率的调和平均数，综合考虑了模型的精确率和召回率。",
+    "complexity": "simple",
+    "category": "指标说明"
+  },
+  {
+    "id": "golden_033",
+    "question": "什么是混淆矩阵？",
+    "ground_truth": "混淆矩阵是展示分类模型预测结果的表格，行表示真实标签，列表示预测标签，能够直观地展示各类别的正确和错误分类情况。",
+    "complexity": "medium",
+    "category": "指标说明"
+  },
+  {
+    "id": "golden_034",
+    "question": "什么是AUC-ROC？",
+    "ground_truth": "AUC-ROC是ROC曲线下的面积，用于评估二分类模型的性能，能够反映模型在不同阈值下的表现。",
+    "complexity": "medium",
+    "category": "指标说明"
+  },
+  {
+    "id": "golden_035",
+    "question": "什么是交叉验证？",
+    "ground_truth": "交叉验证是一种评估模型性能的技术，将数据分成多个子集，轮流使用其中一个作为测试集，其余作为训练集，重复多次进行训练和测试。",
+    "complexity": "medium",
+    "category": "方法说明"
+  },
+  {
+    "id": "golden_036",
+    "question": "什么是超参数？",
+    "ground_truth": "超参数是在训练前需要手动设置的参数，如学习率、批量大小、网络层数等，需要通过实验来选择最优值。",
+    "complexity": "simple",
+    "category": "概念解释"
+  },
+  {
+    "id": "golden_037",
+    "question": "什么是网格搜索？",
+    "ground_truth": "网格搜索是一种超参数调优方法，通过穷举所有可能的超参数组合来找到最优的超参数设置。",
+    "complexity": "simple",
+    "category": "方法说明"
+  },
+  {
+    "id": "golden_038",
+    "question": "什么是随机搜索？",
+    "ground_truth": "随机搜索是一种超参数调优方法，在超参数空间中随机采样进行尝试，通常比网格搜索更高效。",
+    "complexity": "simple",
+    "category": "方法说明"
+  },
+  {
+    "id": "golden_039",
+    "question": "什么是特征工程？",
+    "ground_truth": "特征工程是机器学习中的重要步骤，包括特征选择、特征提取和特征构造，旨在创建有助于模型学习的有效特征。",
+    "complexity": "medium",
+    "category": "概念解释"
+  },
+  {
+    "id": "golden_040",
+    "question": "什么是主成分分析？",
+    "ground_truth": "主成分分析是一种降维技术，通过线性变换将高维数据投影到低维空间，同时尽可能保留原始数据的方差信息。",
+    "complexity": "medium",
+    "category": "概念解释"
+  },
+  {
+    "id": "golden_041",
+    "question": "什么是Embedding？",
+    "ground_truth": "Embedding是将高维稀疏数据（如文字、ID）映射到低维稠密向量空间的技术，便于计算机处理和发现语义关系。",
+    "complexity": "medium",
+    "category": "概念解释"
+  },
+  {
+    "id": "golden_042",
+    "question": "什么是Word2Vec？",
+    "ground_truth": "Word2Vec是一种将单词映射到稠密向量的技术，通过训练神经网络学习词的分布式表示，捕捉词与词之间的语义关系。",
+    "complexity": "medium",
+    "category": "概念解释"
+  },
+  {
+    "id": "golden_043",
+    "question": "BERT和GPT有什么区别？",
+    "ground_truth": "BERT是基于双向Transformer的预训练模型，适合理解任务；GPT是基于单向Transformer的预训练模型，适合生成任务。",
+    "complexity": "medium",
+    "category": "对比分析"
+  },
+  {
+    "id": "golden_044",
+    "question": "什么是Zero-shot学习？",
+    "ground_truth": "Zero-shot学习是指模型能够在从未见过的类别上进行预测，利用类别描述或属性信息进行泛化。",
+    "complexity": "medium",
+    "category": "概念解释"
+  },
+  {
+    "id": "golden_045",
+    "question": "什么是Few-shot学习？",
+    "ground_truth": "Few-shot学习是指模型能够从极少量的标注样本中学习新任务，利用少量示例来适应新任务。",
+    "complexity": "medium",
+    "category": "概念解释"
+  },
+  {
+    "id": "golden_046",
+    "question": "什么是提示工程？",
+    "ground_truth": "提示工程是设计和优化输入提示（Prompt）来引导大语言模型产生期望输出的技术，是使用大语言模型的关键技能。",
+    "complexity": "medium",
+    "category": "方法说明"
+  },
+  {
+    "id": "golden_047",
+    "question": "什么是RAG？",
+    "ground_truth": "RAG（检索增强生成）是一种结合检索系统和生成模型的技术，通过检索外部知识来增强语言模型的生成能力。",
+    "complexity": "simple",
+    "category": "概念解释"
+  },
+  {
+    "id": "golden_048",
+    "question": "RAG系统由哪些部分组成？",
+    "ground_truth": "RAG系统主要由检索模块、生成模块和向量数据库组成。检索模块负责从知识库中获取相关信息，生成模块基于检索结果生成回答。",
+    "complexity": "medium",
+    "category": "系统说明"
+  },
+  {
+    "id": "golden_049",
+    "question": "向量数据库有什么作用？",
+    "ground_truth": "向量数据库专门用于存储和检索高维向量，支持高效的相似度搜索，是RAG系统和其他AI应用的核心组件。",
+    "complexity": "medium",
+    "category": "概念解释"
+  },
+  {
+    "id": "golden_050",
+    "question": "如何评估RAG系统的性能？",
+    "ground_truth": "RAG系统评估主要关注生成质量（Faithfulness、Answer Relevance）和检索质量（Context Precision、Context Recall）两个维度。",
+    "complexity": "medium",
+    "category": "方法说明"
+  }
+]

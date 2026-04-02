@@ -12,6 +12,18 @@ const api = axios.create({
   timeout: 60000,
 });
 
+function getMimeTypeFromExtension(filename: string): string {
+  const ext = filename.split('.').pop()?.toLowerCase();
+  const mimeTypes: Record<string, string> = {
+    pdf: 'application/pdf',
+    docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    txt: 'text/plain',
+    md: 'text/markdown',
+    markdown: 'text/markdown',
+  };
+  return mimeTypes[ext || ''] || 'application/octet-stream';
+}
+
 // 文档管理 API
 export const documentAPI = {
   upload: async (file: File): Promise<DocumentUploadResponse> => {
@@ -26,7 +38,7 @@ export const documentAPI = {
           'Content-Type': 'multipart/form-data',
         },
         params: {
-          mime_type: file.type,
+          mime_type: file.type || getMimeTypeFromExtension(file.name),
           filename: file.name,
         },
       }

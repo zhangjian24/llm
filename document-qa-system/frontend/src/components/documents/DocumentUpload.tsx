@@ -57,7 +57,7 @@ export const DocumentUpload: React.FC = () => {
           {isUploading ? '上传中...' : '点击或拖拽文件到此处'}
         </span>
         <span className="text-xs text-gray-500 mt-1">
-          支持 PDF、DOCX、TXT格式，最大 50MB
+          支持 PDF、DOCX、TXT、Markdown 格式，最大 50MB
         </span>
       </label>
     </div>

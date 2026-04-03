@@ -36,3 +36,7 @@ mybatis-plus:
 logging:
   level:
     com.edu: debug
+
+jwt:
+  secret: edu-ai-platform-secret-key-must-be-at-least-256-bits-long
+  expiration: 86400000

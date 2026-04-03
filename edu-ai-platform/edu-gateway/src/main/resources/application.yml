@@ -1,0 +1,36 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: edu-gateway
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_SERVER:127.0.0.1:8848}
+        namespace: ${NACOS_NAMESPACE:public}
+        group: ${NACOS_GROUP:DEFAULT_GROUP}
+      config:
+        server-addr: ${NACOS_SERVER:127.0.0.1:8848}
+        namespace: ${NACOS_NAMESPACE:public}
+        group: ${NACOS_GROUP:DEFAULT_GROUP}
+        file-extension: yaml
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      routes:
+        - id: edu-user-service
+          uri: lb://edu-user-service
+          predicates:
+            - Path=/api/user/**
+          filters:
+            - StripPrefix=1
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Credentials, Access-Control-Allow-Origin
+
+logging:
+  level:
+    com.edu: debug
+    org.springframework.cloud.gateway: debug

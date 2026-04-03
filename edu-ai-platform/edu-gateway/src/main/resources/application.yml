@@ -29,8 +29,13 @@ spring:
             - StripPrefix=1
       default-filters:
         - DedupeResponseHeader=Access-Control-Allow-Credentials, Access-Control-Allow-Origin
+      httpclient:
+        response-timeout: 30s
 
 logging:
   level:
     com.edu: debug
     org.springframework.cloud.gateway: debug
+
+jwt:
+  secret: edu-ai-platform-secret-key-must-be-at-least-256-bits-long

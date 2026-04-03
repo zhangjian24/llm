@@ -35,10 +35,13 @@
             type="password" 
             v-model="registerForm.confirmPassword" 
             placeholder="请确认密码"
+            @confirm="handleRegister"
           />
         </view>
         
-        <button class="btn-register" @click="handleRegister">注册</button>
+        <button class="btn-register" :loading="loading" @click="handleRegister">
+          {{ loading ? '注册中...' : '注册' }}
+        </button>
         
         <view class="links">
           <text @click="goToLogin">已有账号？立即登录</text>
@@ -58,6 +61,7 @@ const registerForm = ref({
   password: '',
   confirmPassword: ''
 })
+const loading = ref(false)
 
 const handleRegister = async () => {
   if (!registerForm.value.username) {
@@ -76,15 +80,27 @@ const handleRegister = async () => {
     uni.showToast({ title: '两次密码不一致', icon: 'none' })
     return
   }
+  if (registerForm.value.password.length < 6) {
+    uni.showToast({ title: '密码长度至少6位', icon: 'none' })
+    return
+  }
+  
+  loading.value = true
   
   try {
-    await register(registerForm.value)
+    await register({
+      username: registerForm.value.username,
+      password: registerForm.value.password,
+      email: registerForm.value.email
+    })
     uni.showToast({ title: '注册成功', icon: 'success' })
     setTimeout(() => {
       uni.redirectTo({ url: '/pages/login/index' })
     }, 1000)
   } catch (error) {
     uni.showToast({ title: error.message || '注册失败', icon: 'none' })
+  } finally {
+    loading.value = false
   }
 }
 
@@ -149,6 +165,10 @@ const goToLogin = () => {
   line-height: 44px;
   text-align: center;
   margin-top: 10px;
+}
+
+.btn-register[loading] {
+  opacity: 0.7;
 }
 
 .links {

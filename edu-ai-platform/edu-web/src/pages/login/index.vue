@@ -19,10 +19,13 @@
             type="password" 
             v-model="loginForm.password" 
             placeholder="请输入密码"
+            @confirm="handleLogin"
           />
         </view>
         
-        <button class="btn-login" @click="handleLogin">登录</button>
+        <button class="btn-login" :loading="loading" @click="handleLogin">
+          {{ loading ? '登录中...' : '登录' }}
+        </button>
         
         <view class="links">
           <text @click="goToRegister">还没有账号？立即注册</text>
@@ -40,6 +43,7 @@ const loginForm = ref({
   username: '',
   password: ''
 })
+const loading = ref(false)
 
 const handleLogin = async () => {
   if (!loginForm.value.username) {
@@ -50,6 +54,8 @@ const handleLogin = async () => {
     uni.showToast({ title: '请输入密码', icon: 'none' })
     return
   }
+  
+  loading.value = true
   
   try {
     const res = await login(loginForm.value)
@@ -63,6 +69,8 @@ const handleLogin = async () => {
     }
   } catch (error) {
     uni.showToast({ title: error.message || '登录失败', icon: 'none' })
+  } finally {
+    loading.value = false
   }
 }
 
@@ -126,6 +134,10 @@ const goToRegister = () => {
   font-size: 16px;
   line-height: 44px;
   text-align: center;
+}
+
+.btn-login[loading] {
+  opacity: 0.7;
 }
 
 .links {

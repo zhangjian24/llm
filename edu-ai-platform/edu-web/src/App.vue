@@ -1,17 +1,28 @@
 <template>
-  <view>
-    <view class="app-container">
-      <slot></slot>
-    </view>
+  <view class="app">
+    <slot />
   </view>
 </template>
 
-<script setup>
+<script>
+export default {
+  onLaunch: function() {
+    console.log('App Launch')
+  },
+  onShow: function() {
+    console.log('App Show')
+  },
+  onHide: function() {
+    console.log('App Hide')
+  }
+}
 </script>
 
 <style>
-.app-container {
+.app {
   min-height: 100vh;
+}
+page {
   background-color: #f5f5f5;
 }
 </style>

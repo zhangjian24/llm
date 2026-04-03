@@ -1,5 +1,5 @@
 server:
-  port: 8080
+  port: 8082
 
 spring:
   application:
@@ -15,6 +15,8 @@ spring:
         namespace: ${NACOS_NAMESPACE:public}
         group: ${NACOS_GROUP:DEFAULT_GROUP}
         file-extension: yaml
+        import-check:
+          enabled: false
     gateway:
       discovery:
         locator:
@@ -28,7 +30,7 @@ spring:
           filters:
             - StripPrefix=1
       default-filters:
-        - DedupeResponseHeader=Access-Control-Allow-Credentials, Access-Control-Allow-Origin
+        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin strategy=RETAIN_FIRST
       httpclient:
         response-timeout: 30s
 

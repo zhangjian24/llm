@@ -21,4 +21,8 @@ public class UserService {
     public User findById(Long id) {
         return userMapper.selectById(id);
     }
+    
+    public void save(User user) {
+        userMapper.insert(user);
+    }
 }

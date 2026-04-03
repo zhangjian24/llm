@@ -7,20 +7,20 @@ spring:
   cloud:
     nacos:
       discovery:
-        server-addr: ${NACOS_SERVER:127.0.0.1:8848}
-        namespace: ${NACOS_NAMESPACE:public}
-        group: ${NACOS_GROUP:DEFAULT_GROUP}
-      config:
-        server-addr: ${NACOS_SERVER:127.0.0.1:8848}
-        namespace: ${NACOS_NAMESPACE:public}
-        group: ${NACOS_GROUP:DEFAULT_GROUP}
-        file-extension: yaml
+        server-addr: "127.0.0.1:8848"
+        namespace: public
+        group: DEFAULT_GROUP
   data:
     redis:
-      host: ${REDIS_HOST:127.0.0.1}
-      port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:}
+      host: "127.0.0.1"
+      port: 6379
+      password: ""
       database: 0
+  datasource:
+    url: "jdbc:postgresql://localhost:5432/postgresql"
+    username: postgresql
+    password: mM6hbJXelbGd
+    driver-class-name: org.postgresql.Driver
 
 mybatis-plus:
   configuration:

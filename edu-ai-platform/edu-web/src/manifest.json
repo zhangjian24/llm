@@ -1,0 +1,65 @@
+{
+    "name": "AI Education Platform",
+    "appid": "__UNI__EDU-AI-PLATFORM",
+    "description": "AI 教育平台前端应用",
+    "versionName": "0.1.0",
+    "versionCode": "100",
+    "transformPx": false,
+    "app-plus": {
+        "usingComponents": true,
+        "nvueStyleCompiler": "uni-app",
+        "compilerVersion": 3,
+        "splashscreen": {
+            "alwaysShowBeforeRender": true,
+            "waiting": true,
+            "autoclose": true,
+            "delay": 0
+        },
+        "modules": {},
+        "distribute": {
+            "android": {
+                "permissions": []
+            },
+            "ios": {},
+            "sdkConfigs": {}
+        }
+    },
+    "quickapp": {},
+    "mp-weixin": {
+        "appid": "",
+        "setting": {
+            "urlCheck": false,
+            "es6": true,
+            "postcss": true,
+            "minified": true
+        },
+        "usingComponents": true
+    },
+    "mp-alipay": {
+        "usingComponents": true
+    },
+    "mp-baidu": {
+        "usingComponents": true
+    },
+    "mp-toutiao": {
+        "usingComponents": true
+    },
+    "uniStatistics": {
+        "enable": false
+    },
+    "h5": {
+        "devServer": {
+            "https": false
+        },
+        "title": "AI Education Platform",
+        "router": {
+            "mode": "hash"
+        },
+        "optimization": {
+            "treeShaking": {
+                "enable": true
+            }
+        },
+        "template": ""
+    }
+}

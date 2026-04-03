@@ -42,11 +42,12 @@
 </template>
 
 <script setup>
-import { ref, onShow } from 'vue'
+import { ref } from 'vue'
 import { getUserInfo, logout } from '@/utils/api'
 
 const userInfo = ref({})
 
+// uni-app 页面生命周期 - onShow
 onShow(() => {
   const info = uni.getStorageSync('userInfo')
   if (info) {

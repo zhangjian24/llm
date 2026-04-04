@@ -147,8 +147,8 @@
 | 4 | 系列1 | 实战 | Spring Boot + Nacos实现服务注册与调用 | @NacosInjected源码解析、OpenFeign原理、负载均衡策略对比 |
 | 5 | 系列1 | 原理 | Spring Cloud Gateway核心原理与源码深度 | 路由机制与RouteLocator、过滤器链原理、全局过滤器、响应式编程原理 |
 | 6 | 系列1 | 实战 | Spring Cloud Gateway + Nacos深度集成实战 | 服务发现配置、动态路由、权重路由、本地限流、与Sentinel整合 |
-| 7 | 系列1 | 实战 | uni-app + TailwindCSS + uView Plus环境搭建 | Vite构建原理、SCSS变量与主题系统、组件复用、目录结构 |
-| 8 | 系列1 | 实战 | uni-app登录注册页面与JWT鉴权实现 | token存储安全策略、路由守卫与权限控制、SSO概念、token刷新机制 |
+| 7 | 系列1 | 实战 | uni-app环境搭建与JWT鉴权实现 | Vite构建原理、SCSS变量与主题系统、组件复用、token存储安全策略、路由守卫与权限控制 |
+| 8 | 系列1 | 实战 | Flyway数据库版本化管理深度实战 | SQL脚本版本化、多模块迁移脚本协调、迁移策略与回滚、undo log原理 |
 
 #### 技术点应用
 
@@ -158,6 +158,10 @@
 | JWT鉴权 | edu-user-service/src/main/java/.../security/JwtUtil.java |
 | SC Gateway路由 | edu-gateway/src/main/java/.../config/GatewayRoutesConfig.java |
 | 服务调用 | edu-user-service/src/main/java/.../feign/UserFeignClient.java |
+| Flyway迁移脚本 | edu-user-service/src/main/resources/db/migration/V1__create_sys_user.sql |
+| Flyway迁移脚本 | edu-course-service/src/main/resources/db/migration/ |
+| Flyway迁移脚本 | edu-homework-service/src/main/resources/db/migration/ |
+| Flyway迁移脚本 | edu-exam-service/src/main/resources/db/migration/ |
 
 ---
 
@@ -199,6 +203,9 @@
 | Redis缓存 | edu-user-service/src/main/java/.../config/RedisConfig.java |
 | 文件上传 | edu-homework-service/src/main/java/.../controller/UploadController.java |
 | 分布式锁 | edu-exam-service/src/main/java/.../lock/DistributedLock.java |
+| Flyway迁移脚本 | edu-course-service/src/main/resources/db/migration/ |
+| Flyway迁移脚本 | edu-homework-service/src/main/resources/db/migration/ |
+| Flyway迁移脚本 | edu-exam-service/src/main/resources/db/migration/ |
 
 ---
 

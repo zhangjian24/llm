@@ -37,6 +37,7 @@
         
         <mysql.version>8.0.33</mysql.version>
         <postgresql.version>42.7.3</postgresql.version>
+        <flyway.version>10.10.0</flyway.version>
         
         <junit.version>5.11.0</junit.version>
         <mockito.version>5.12.0</mockito.version>
@@ -113,6 +114,17 @@
                 <groupId>org.postgresql</groupId>
                 <artifactId>postgresql</artifactId>
                 <version>${postgresql.version}</version>
+            </dependency>
+            
+            <dependency>
+                <groupId>org.flywaydb</groupId>
+                <artifactId>flyway-core</artifactId>
+                <version>${flyway.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.flywaydb</groupId>
+                <artifactId>flyway-database-postgresql</artifactId>
+                <version>${flyway.version}</version>
             </dependency>
             
             <dependency>

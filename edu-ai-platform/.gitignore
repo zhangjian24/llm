@@ -86,3 +86,6 @@ temp/
 *.tmp
 *.bak
 *.orig
+
+# Playwright MCP
+.playwright-mcp/

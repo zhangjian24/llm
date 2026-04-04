@@ -213,11 +213,27 @@ nacos:
 
 ### 8.1 服务注册配置
 
+本项目使用 Spring Cloud Alibaba 自动配置机制，无需手动编写 NacosConfig 类。只需在 `pom.xml` 中引入依赖即可：
+
+```xml
+<!-- edu-user-service/pom.xml -->
+<dependency>
+    <groupId>com.alibaba.cloud</groupId>
+    <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
+</dependency>
+```
+
+启动类自动启用服务发现：
+
 ```java
-// edu-user-service/src/main/java/.../config/NacosConfig.java
-@Configuration
-@EnableNacos(globalProperties = @NacosProperties(serverAddr = "${spring.cloud.nacos.discovery.server-addr}"))
-public class NacosConfig {
+// edu-user-service/src/main/java/com/edu/user/UserServiceApplication.java
+@SpringBootApplication
+@EnableDiscoveryClient  // 启用服务发现
+@EnableFeignClients     // 启用 Feign 客户端
+public class UserServiceApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(UserServiceApplication.class, args);
+    }
 }
 ```
 
@@ -234,9 +250,39 @@ spring:
   cloud:
     nacos:
       discovery:
-        server-addr: ${NACOS_SERVER:127.0.0.1:8848}
-        namespace: ${NACOS_NAMESPACE:public}
-        group: ${NACOS_GROUP:DEFAULT_GROUP}
+        server-addr: "127.0.0.1:8848"
+        namespace: public
+        group: DEFAULT_GROUP
+  datasource:
+    url: "jdbc:postgresql://localhost:5432/postgresql"
+    username: postgresql
+    password: mM6hbJXelbGd
+    driver-class-name: org.postgresql.Driver
+  data:
+    redis:
+      host: "127.0.0.1"
+      port: 6379
+      password: ""
+      database: 0
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      id-type: auto
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+logging:
+  level:
+    com.edu: debug
+
+jwt:
+  secret: edu-ai-platform-secret-key-must-be-at-least-256-bits-long
+  expiration: 86400000
 ```
 
 完整代码见：[edu-user-service](https://github.com/anomalyco/edu-ai-platform/tree/main/edu-user-service)

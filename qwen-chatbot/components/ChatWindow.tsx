@@ -5,6 +5,7 @@ import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
 import { AiOutlineRobot, AiOutlineUser } from 'react-icons/ai';
 import ThinkingIndicator from './ThinkingIndicator';
+import { log } from '../lib/logger';
 import type { Message } from '../types';
 
 interface ChatWindowProps {
@@ -20,7 +21,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   isGenerating = false,
   currentResponse = ''
 }) => {
-  console.log('ChatWindow received messages:', messages, 'isThinking:', isThinking, 'isGenerating:', isGenerating);
+  log.debug('ChatWindow received messages:', messages, 'isThinking:', isThinking, 'isGenerating:', isGenerating);
   return (
     <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
       {messages.length === 0 ? (

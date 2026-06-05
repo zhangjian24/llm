@@ -1,12 +1,18 @@
 import '../styles/globals.css';
 import type { AppProps } from 'next/app';
-import { AppProvider } from '../contexts/AppContext';
+import { RoleProvider } from '../contexts/RoleContext';
+import { ChatProvider } from '../contexts/ChatContext';
+import { UIProvider } from '../contexts/UIContext';
 
 function MyApp({ Component, pageProps }: AppProps) {
   return (
-    <AppProvider>
-      <Component {...pageProps} />
-    </AppProvider>
+    <RoleProvider>
+      <ChatProvider>
+        <UIProvider>
+          <Component {...pageProps} />
+        </UIProvider>
+      </ChatProvider>
+    </RoleProvider>
   );
 }
 

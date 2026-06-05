@@ -1,3 +1,12 @@
+/**
+ * @deprecated 自本拆分后已废弃。请改用：
+ *   - ChatProvider / useChatContext：持久化 messages / conversationHistory / selectedRoleId / inputMessage
+ *   - UIProvider / useUIContext：临时 isThinking / isGenerating / currentResponse / showHistoryModal
+ *   - RoleProvider / useRoleContext：useRoleStorage 的 Context 包装
+ *
+ * 此文件保留仅为外部代码兼容（如第三方插件），新代码不应再使用。
+ * 计划在下一版本（v2）删除。
+ */
 import React, { createContext, useContext, useReducer, ReactNode } from 'react';
 import { Message, ConversationHistory } from '../types';
 

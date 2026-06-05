@@ -88,6 +88,7 @@
     "toidentifier": "^1.0.1",
     "type-is": "^2.0.1",
     "unpipe": "^1.0.0",
+    "use-debounce": "^10.1.1",
     "vary": "^1.1.2",
     "wrappy": "^1.0.2",
     "zod": "^4.3.6"

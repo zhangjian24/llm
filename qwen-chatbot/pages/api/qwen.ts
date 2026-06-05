@@ -26,7 +26,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     model,              // 模型名称
     temperature = 0.7,  // 生成温度
     top_p = 0.9,      // Top-p采样参数
-    max_tokens = 2048   // 最大生成token数
+    max_tokens = 2048,   // 最大生成token数
+    api_key,           // API Key，前端传入，fallback 环境变量
   } = req.body;
 
   // 验证messages参数是否存在且为数组
@@ -60,6 +61,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       temperature,                                        // 生成温度
       topP: top_p,                                       // Top-p采样参数
       maxTokens: max_tokens,                             // 最大生成token数
+      apiKey: api_key,                                   // API Key
     };
 
     // 检查是否需要使用工具调用

@@ -24,12 +24,14 @@ export const createQwenChatModel = (options?: {
   temperature?: number;
   topP?: number;
   maxTokens?: number;
+  apiKey?: string;
 }) => {
   const {
     modelName = process.env.MODEL_NAME || 'qwen-max',
     temperature = 0.7,
     topP = 0.9,
-    maxTokens = 2048
+    maxTokens = 2048,
+    apiKey = process.env.OPENAI_API_KEY,
   } = options || {};
 
   return new ChatOpenAI({
@@ -40,7 +42,7 @@ export const createQwenChatModel = (options?: {
     configuration: {
       baseURL: process.env.OPENAI_API_BASE || 'https://dashscope.aliyuncs.com/compatible-mode/v1',
     },
-    apiKey: process.env.OPENAI_API_KEY,
+    apiKey,
   });
 };
 
@@ -56,6 +58,8 @@ export interface QwenChatOptions {
   topP?: number;
   /** 最大生成token数，默认2048 */
   maxTokens?: number;
+  /** API Key，优先使用传入值，fallback 环境变量 */
+  apiKey?: string;
 }
 
 /**
@@ -99,6 +103,7 @@ export const callQwenChat = async (
     temperature: options?.temperature,
     topP: options?.topP,
     maxTokens: options?.maxTokens,
+    apiKey: options?.apiKey,
   });
 
   const result = await model.invoke(messages);
@@ -133,6 +138,7 @@ export async function* streamQwenChat(
     temperature: options?.temperature,
     topP: options?.topP,
     maxTokens: options?.maxTokens,
+    apiKey: options?.apiKey,
   });
 
   const stream = await model.stream(messages);
@@ -167,6 +173,7 @@ export const callQwenChatWithTools = async (
     temperature: options?.temperature,
     topP: options?.topP,
     maxTokens: options?.maxTokens,
+    apiKey: options?.apiKey,
   });
 
   // 绑定工具到模型
@@ -244,6 +251,7 @@ export async function* streamQwenChatWithTools(
     temperature: options?.temperature,
     topP: options?.topP,
     maxTokens: options?.maxTokens,
+    apiKey: options?.apiKey,
   });
 
   // 绑定工具到模型

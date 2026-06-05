@@ -1,7 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { AiOutlineMessage, AiOutlineUsergroupAdd } from 'react-icons/ai';
+import { AiOutlineMessage, AiOutlineUsergroupAdd, AiOutlineSetting } from 'react-icons/ai';
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -24,6 +24,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onClose }) => {
       title: 'AI角色管理', 
       path: '/roles', 
       icon: <AiOutlineUsergroupAdd className="w-5 h-5" />
+    },
+    { 
+      id: 'settings', 
+      title: '设置', 
+      path: '/settings', 
+      icon: <AiOutlineSetting className="w-5 h-5" />
     }
   ];
 

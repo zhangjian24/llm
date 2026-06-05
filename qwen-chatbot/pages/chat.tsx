@@ -11,6 +11,8 @@ import { ConversationHistory, Message } from '../types';
 import HistoryModal from '../components/HistoryModal';
 import Layout from '../components/Layout';
 import { useAppContext } from '../contexts/AppContext';
+import { getStoredApiKey } from '../components/useAISettings';
+import { useRouter } from 'next/router';
 
 
 export default function ChatPage() {
@@ -19,6 +21,8 @@ export default function ChatPage() {
   const [currentResponse, setCurrentResponse] = useState('');
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   
+  const router = useRouter();
+
   // 使用全局状态
   const { state, dispatch } = useAppContext();
   
@@ -91,6 +95,13 @@ export default function ChatPage() {
     e.preventDefault();
     if (!inputMessage.trim() || isThinking || isGenerating) return;
 
+    const apiKey = getStoredApiKey();
+    if (!apiKey) {
+      alert('请先配置 API Key');
+      router.push('/settings');
+      return;
+    }
+
     // 添加用户消息
     const userMessage = { role: 'user', content: inputMessage };
     dispatch({ type: 'ADD_MESSAGE', payload: userMessage });
@@ -134,6 +145,7 @@ export default function ChatPage() {
           temperature: modelConfig.temperature,
           top_p: modelConfig.top_p,
           max_tokens: modelConfig.max_tokens,
+          api_key: apiKey,
         }),
       });
 

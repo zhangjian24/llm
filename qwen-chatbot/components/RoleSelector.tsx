@@ -8,18 +8,20 @@ interface RoleSelectorProps {
   disabled?: boolean;
 }
 
-const RoleSelector: React.FC<RoleSelectorProps> = ({ 
-  roles, 
-  selectedRoleId, 
+const RoleSelector: React.FC<RoleSelectorProps> = ({
+  roles,
+  selectedRoleId,
   onSelectRole,
-  disabled = false
+  disabled = false,
 }) => {
-  const selectedRole = roles.find(role => role.id === selectedRoleId);
+  const selectedRole = roles.find((role) => role.id === selectedRoleId);
 
   return (
     <div className="space-y-4">
       <div>
-        <label htmlFor="roleSelect" className="block text-sm font-medium text-gray-700 mb-2">AI角色:</label>
+        <label htmlFor="roleSelect" className="block text-sm font-medium text-gray-700 mb-2">
+          AI角色:
+        </label>
         <select
           id="roleSelect"
           value={selectedRoleId || ''}
@@ -28,14 +30,14 @@ const RoleSelector: React.FC<RoleSelectorProps> = ({
           disabled={disabled}
         >
           <option value="">请选择角色...</option>
-          {roles.map(role => (
+          {roles.map((role) => (
             <option key={role.id} value={role.id}>
               {role.name} {role.isDefault ? '(默认)' : ''}
             </option>
           ))}
         </select>
       </div>
-      
+
       {selectedRole && (
         <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
           <div className="flex items-center gap-2 mb-2">
@@ -54,7 +56,9 @@ const RoleSelector: React.FC<RoleSelectorProps> = ({
             </div>
             <div className="flex justify-between">
               <strong className="text-gray-700">温度:</strong>
-              <span className="text-gray-600">{selectedRole.modelConfig.temperature.toFixed(2)}</span>
+              <span className="text-gray-600">
+                {selectedRole.modelConfig.temperature.toFixed(2)}
+              </span>
             </div>
             <div className="flex justify-between">
               <strong className="text-gray-700">Top-P:</strong>

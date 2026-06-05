@@ -47,7 +47,7 @@ export const DEFAULT_ROLES: Role[] = [
       top_p: 0.8,
       max_tokens: 2048,
     },
-    isDefault: true
+    isDefault: true,
   },
   {
     id: 'programming-tutor',
@@ -94,7 +94,7 @@ export const DEFAULT_ROLES: Role[] = [
       top_p: 0.9,
       max_tokens: 4096,
     },
-    isDefault: false
+    isDefault: false,
   },
   {
     id: 'copywriter',
@@ -141,8 +141,8 @@ export const DEFAULT_ROLES: Role[] = [
       top_p: 0.9,
       max_tokens: 2048,
     },
-    isDefault: false
-  }
+    isDefault: false,
+  },
 ];
 
 // 角色管理器组件
@@ -163,7 +163,7 @@ const RoleManager: React.FC<RoleManagerProps> = ({
   onUpdateRole,
   onDeleteRole,
   setDefaultRole,
-  selectedRoleId
+  selectedRoleId,
 }) => {
   const [showForm, setShowForm] = useState(false);
   const [currentRole, setCurrentRole] = useState<Omit<Role, 'id'> | Role | null>(null);
@@ -178,13 +178,13 @@ const RoleManager: React.FC<RoleManagerProps> = ({
   // 初始化默认角色
   useEffect(() => {
     if (roles.length === 0) {
-      DEFAULT_ROLES.forEach(role => {
+      DEFAULT_ROLES.forEach((role) => {
         onCreateRole({
           name: role.name,
           description: role.description,
           systemPrompt: role.systemPrompt,
           modelConfig: { ...role.modelConfig },
-          isDefault: role.isDefault
+          isDefault: role.isDefault,
         });
       });
     }
@@ -201,7 +201,7 @@ const RoleManager: React.FC<RoleManagerProps> = ({
         top_p: 0.9,
         max_tokens: 2048,
       },
-      isDefault: false
+      isDefault: false,
     });
     setIsEditing(false);
     setShowForm(true);
@@ -222,13 +222,13 @@ const RoleManager: React.FC<RoleManagerProps> = ({
 
   const handleSave = () => {
     if (!currentRole) return;
-    
+
     if (isEditing && 'id' in currentRole) {
       onUpdateRole(currentRole as Role);
     } else {
       onCreateRole(currentRole as Omit<Role, 'id'>);
     }
-    
+
     setShowForm(false);
     setCurrentRole(null);
   };
@@ -240,10 +240,10 @@ const RoleManager: React.FC<RoleManagerProps> = ({
 
   const handleInputChange = (field: string, value: any) => {
     if (!currentRole) return;
-    
-    setCurrentRole(prev => {
+
+    setCurrentRole((prev) => {
       if (!prev) return null;
-      
+
       // 处理嵌套的 modelConfig
       if (field.startsWith('modelConfig.')) {
         const configField = field.split('.')[1];
@@ -251,14 +251,14 @@ const RoleManager: React.FC<RoleManagerProps> = ({
           ...prev,
           modelConfig: {
             ...prev.modelConfig,
-            [configField]: value
-          }
+            [configField]: value,
+          },
         };
       }
-      
+
       return {
         ...prev,
-        [field]: value
+        [field]: value,
       };
     });
   };
@@ -267,18 +267,18 @@ const RoleManager: React.FC<RoleManagerProps> = ({
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h3 className="text-xl font-bold text-gray-800">AI角色管理</h3>
-        <button 
-          onClick={handleCreateNew} 
+        <button
+          onClick={handleCreateNew}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
         >
           + 新建角色
         </button>
       </div>
-      
+
       <div className="grid gap-4">
-        {roles.map(role => (
-          <div 
-            key={role.id} 
+        {roles.map((role) => (
+          <div
+            key={role.id}
             className={`bg-white rounded-lg border p-4 cursor-pointer transition-all hover:shadow-md ${selectedRoleId === role.id ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-200'}`}
             onClick={() => onSelectRole(role.id)}
           >
@@ -296,21 +296,21 @@ const RoleManager: React.FC<RoleManagerProps> = ({
               </div>
               <div className="flex gap-2">
                 {!role.isDefault && (
-                  <button 
-                    onClick={(e) => handleSetDefault(role.id, e)} 
+                  <button
+                    onClick={(e) => handleSetDefault(role.id, e)}
                     className="px-3 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
                   >
                     设为默认
                   </button>
                 )}
-                <button 
-                  onClick={(e) => handleEdit(role)} 
+                <button
+                  onClick={(e) => handleEdit(role)}
                   className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
                 >
                   编辑
                 </button>
-                <button 
-                  onClick={(e) => handleDelete(role.id, e)} 
+                <button
+                  onClick={(e) => handleDelete(role.id, e)}
                   className="px-3 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
                 >
                   删除
@@ -320,12 +320,14 @@ const RoleManager: React.FC<RoleManagerProps> = ({
           </div>
         ))}
       </div>
-      
+
       {showForm && currentRole && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
-            <h3 className="text-xl font-bold text-gray-800 mb-6 border-b pb-3">{isEditing ? '编辑角色' : '新建角色'}</h3>
-            
+            <h3 className="text-xl font-bold text-gray-800 mb-6 border-b pb-3">
+              {isEditing ? '编辑角色' : '新建角色'}
+            </h3>
+
             <div className="space-y-4 mb-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">角色名称:</label>
@@ -337,7 +339,7 @@ const RoleManager: React.FC<RoleManagerProps> = ({
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">角色描述:</label>
                 <textarea
@@ -348,9 +350,11 @@ const RoleManager: React.FC<RoleManagerProps> = ({
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
-              
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">系统指令 (System Prompt):</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  系统指令 (System Prompt):
+                </label>
                 <textarea
                   value={currentRole.systemPrompt}
                   onChange={(e) => handleInputChange('systemPrompt', e.target.value)}
@@ -359,7 +363,7 @@ const RoleManager: React.FC<RoleManagerProps> = ({
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-3">模型配置:</label>
                 <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
@@ -377,11 +381,15 @@ const RoleManager: React.FC<RoleManagerProps> = ({
                       ))}
                     </select>
                   </div>
-                  
+
                   <div>
                     <div className="flex justify-between items-center mb-2">
-                      <label className="text-sm font-medium text-gray-700">Temperature: {currentRole.modelConfig.temperature.toFixed(2)}</label>
-                      <span className="text-sm text-gray-500 bg-gray-200 px-2 py-1 rounded">{currentRole.modelConfig.temperature.toFixed(2)}</span>
+                      <label className="text-sm font-medium text-gray-700">
+                        Temperature: {currentRole.modelConfig.temperature.toFixed(2)}
+                      </label>
+                      <span className="text-sm text-gray-500 bg-gray-200 px-2 py-1 rounded">
+                        {currentRole.modelConfig.temperature.toFixed(2)}
+                      </span>
                     </div>
                     <input
                       type="range"
@@ -389,15 +397,21 @@ const RoleManager: React.FC<RoleManagerProps> = ({
                       max="2"
                       step="0.01"
                       value={currentRole.modelConfig.temperature}
-                      onChange={(e) => handleInputChange('modelConfig.temperature', parseFloat(e.target.value))}
+                      onChange={(e) =>
+                        handleInputChange('modelConfig.temperature', parseFloat(e.target.value))
+                      }
                       className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
                     />
                   </div>
-                  
+
                   <div>
                     <div className="flex justify-between items-center mb-2">
-                      <label className="text-sm font-medium text-gray-700">Top-P: {currentRole.modelConfig.top_p.toFixed(2)}</label>
-                      <span className="text-sm text-gray-500 bg-gray-200 px-2 py-1 rounded">{currentRole.modelConfig.top_p.toFixed(2)}</span>
+                      <label className="text-sm font-medium text-gray-700">
+                        Top-P: {currentRole.modelConfig.top_p.toFixed(2)}
+                      </label>
+                      <span className="text-sm text-gray-500 bg-gray-200 px-2 py-1 rounded">
+                        {currentRole.modelConfig.top_p.toFixed(2)}
+                      </span>
                     </div>
                     <input
                       type="range"
@@ -405,15 +419,21 @@ const RoleManager: React.FC<RoleManagerProps> = ({
                       max="1"
                       step="0.01"
                       value={currentRole.modelConfig.top_p}
-                      onChange={(e) => handleInputChange('modelConfig.top_p', parseFloat(e.target.value))}
+                      onChange={(e) =>
+                        handleInputChange('modelConfig.top_p', parseFloat(e.target.value))
+                      }
                       className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
                     />
                   </div>
-                  
+
                   <div>
                     <div className="flex justify-between items-center mb-2">
-                      <label className="text-sm font-medium text-gray-700">Max Tokens: {currentRole.modelConfig.max_tokens}</label>
-                      <span className="text-sm text-gray-500 bg-gray-200 px-2 py-1 rounded">{currentRole.modelConfig.max_tokens}</span>
+                      <label className="text-sm font-medium text-gray-700">
+                        Max Tokens: {currentRole.modelConfig.max_tokens}
+                      </label>
+                      <span className="text-sm text-gray-500 bg-gray-200 px-2 py-1 rounded">
+                        {currentRole.modelConfig.max_tokens}
+                      </span>
                     </div>
                     <input
                       type="range"
@@ -421,13 +441,15 @@ const RoleManager: React.FC<RoleManagerProps> = ({
                       max="8192"
                       step="1"
                       value={currentRole.modelConfig.max_tokens}
-                      onChange={(e) => handleInputChange('modelConfig.max_tokens', parseInt(e.target.value))}
+                      onChange={(e) =>
+                        handleInputChange('modelConfig.max_tokens', parseInt(e.target.value))
+                      }
                       className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
                     />
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex items-center">
                 <input
                   type="checkbox"
@@ -438,16 +460,16 @@ const RoleManager: React.FC<RoleManagerProps> = ({
                 <label className="text-sm text-gray-700">设为默认角色</label>
               </div>
             </div>
-            
+
             <div className="flex justify-end gap-3 pt-4 border-t">
-              <button 
-                onClick={handleCancel} 
+              <button
+                onClick={handleCancel}
                 className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
               >
                 取消
               </button>
-              <button 
-                onClick={handleSave} 
+              <button
+                onClick={handleSave}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 保存

@@ -58,8 +58,12 @@ const getInitialState = (): AppState => {
           ...defaultState,
           ...loadedState,
           // 确保消息数组中的对象格式正确
-          messages: Array.isArray(loadedState.messages) ? loadedState.messages : defaultState.messages,
-          conversationHistory: Array.isArray(loadedState.conversationHistory) ? loadedState.conversationHistory : defaultState.conversationHistory,
+          messages: Array.isArray(loadedState.messages)
+            ? loadedState.messages
+            : defaultState.messages,
+          conversationHistory: Array.isArray(loadedState.conversationHistory)
+            ? loadedState.conversationHistory
+            : defaultState.conversationHistory,
         };
       }
     } catch (err) {
@@ -93,8 +97,8 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
     case 'UPDATE_HISTORY_EVALUATION':
       newState = {
         ...state,
-        conversationHistory: state.conversationHistory.map(item =>
-          item.id === action.payload.id ? { ...item, evaluation: action.payload.evaluation } : item
+        conversationHistory: state.conversationHistory.map((item) =>
+          item.id === action.payload.id ? { ...item, evaluation: action.payload.evaluation } : item,
         ),
       };
       break;
@@ -130,11 +134,7 @@ interface AppProviderProps {
 export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [state, dispatch] = useReducer(appReducer, undefined, getInitialState);
 
-  return (
-    <AppContext.Provider value={{ state, dispatch }}>
-      {children}
-    </AppContext.Provider>
-  );
+  return <AppContext.Provider value={{ state, dispatch }}>{children}</AppContext.Provider>;
 };
 
 // 自定义Hook

@@ -4,9 +4,7 @@
 
 ![](https://img.jianzhang.cc/2026/01/7179c34f282c33d4c06655d215b0eef7.png)
 
-
 ![](https://img.jianzhang.cc/2026/01/6928ea31bb39ace945b15a9646e4406c.png)
-
 
 ![](https://img.jianzhang.cc/2026/02/0758cb218c03dfce5e1b489cae158139.png)
 
@@ -135,6 +133,7 @@ qwen-chatbot/
 - `MODEL_NAME`: 使用的模型名称，默认为 `qwen-max`
 
 API 支持 token 使用量统计功能，可在响应中获取详细的 token 消耗信息用于成本控制和性能优化：
+
 - `prompt_tokens`: 输入消息的 token 数量
 - `completion_tokens`: 模型回复的 token 数量
 - `total_tokens`: 总 token 数量（输入 + 输出）
@@ -143,6 +142,7 @@ API 支持 token 使用量统计功能，可在响应中获取详细的 token �
 ## 使用说明
 
 ### 基础对话
+
 1. 在输入框中输入您的问题或指令
 2. 点击 "Send" 按钮或按 Enter 键提交
 3. 机器人将以流式方式返回回答
@@ -151,6 +151,7 @@ API 支持 token 使用量统计功能，可在响应中获取详细的 token �
 6. 在右侧面板中可以查看本次会话的累计token消耗统计
 
 ### AI角色管理
+
 1. 点击左侧导航栏的"AI角色管理"
 2. 可以查看现有角色或创建新角色
 3. 每个角色可以配置：
@@ -161,6 +162,7 @@ API 支持 token 使用量统计功能，可在响应中获取详细的 token �
 4. 创建后可在聊天页面选择对应角色
 
 ### 模型配置
+
 1. 在聊天页面可以调整LLM参数
 2. 当选择特定角色时，参数配置会被锁定
 3. 支持三种Qwen模型：
@@ -169,6 +171,7 @@ API 支持 token 使用量统计功能，可在响应中获取详细的 token �
    - Qwen-Max：最强能力
 
 ### 历史记录查看
+
 1. 点击"查看历史"按钮打开对话历史
 2. 可以查看：
    - 时间戳和对话内容
@@ -180,22 +183,26 @@ API 支持 token 使用量统计功能，可在响应中获取详细的 token �
 ## 自定义配置
 
 ### 环境变量配置
+
 - 更换模型：在 `.env.local` 中更改 `MODEL_NAME`
 - API 地址：在 `.env.local` 中更改 `OPENAI_API_BASE`
 - 密钥管理：在 `.env.local` 中配置 `OPENAI_API_KEY`
 
 ### 界面样式定制
+
 - 使用 Tailwind CSS 类名进行样式设计
 - 参考 [Tailwind CSS 文档](https://tailwindcss.com/docs) 进行高级定制
 - 通过修改组件中的 react-icons 导入语句更换图标
 - Token显示样式可通过Tailwind CSS类名调整
 
 ### AI角色扩展
+
 - 在`components/RoleManager.tsx`中添加新的预设角色
 - 修改`lib/langchain/tools.ts`添加新的工具函数
 - 扩展`types/index.ts`中的角色接口定义
 
 ### 模型参数调优
+
 - temperature：控制输出随机性（0-2）
 - top_p：控制核采样参数（0-1）
 - max_tokens：限制最大输出长度

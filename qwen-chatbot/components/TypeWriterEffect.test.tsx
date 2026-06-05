@@ -6,7 +6,7 @@
  * - text 变化时重新启动动画
  * - 完整文本在若干帧后渲染完毕
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
 import TypeWriterEffect from './TypeWriterEffect';
 
@@ -17,14 +17,14 @@ describe('TypeWriterEffect', () => {
   });
 
   it('progressively reveals text', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     const { rerender } = render(<TypeWriterEffect text="Hello" speed={10} />);
     act(() => {
-      jest.advanceTimersByTime(50);
+      vi.advanceTimersByTime(50);
     });
     expect(screen.getByText(/Hello/)).toBeInTheDocument();
     rerender(<TypeWriterEffect text="Hello World" speed={10} />);
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   it('completes full text after enough frames', () => {

@@ -15,20 +15,13 @@ import { getStoredApiKey } from '../components/useAISettings';
 import { LoadingState } from '../components/LoadingState';
 import { useRouter } from 'next/router';
 
-
-
 export default function ChatPage() {
   const router = useRouter();
 
   // 新 Context 拆分：持久化 + 临时 UI 状态分离
   const { state: chatState, dispatch: chatDispatch } = useChatContext();
   const ui = useUIContext();
-  const {
-    roles,
-    loading,
-    getDefaultRole,
-    setDefaultRole,
-  } = useRoleContext();
+  const { roles, loading, getDefaultRole, setDefaultRole } = useRoleContext();
 
   const messages = chatState.messages;
   const inputMessage = chatState.inputMessage;
@@ -36,10 +29,7 @@ export default function ChatPage() {
   const selectedRoleId = chatState.selectedRoleId;
 
   // 流式响应：直接订阅 messages 最后一条，不再维护独立的 currentResponse
-  const lastMessage = useMemo(
-    () => messages[messages.length - 1],
-    [messages]
-  );
+  const lastMessage = useMemo(() => messages[messages.length - 1], [messages]);
   const isStreaming = ui.isGenerating && lastMessage?.role === 'assistant';
 
   // LLM参数配置
@@ -127,7 +117,10 @@ export default function ChatPage() {
           // 检查是否已经有系统消息，如果没有则添加
           const hasSystemMessage = messages.some((msg) => msg.role === 'system');
           if (!hasSystemMessage) {
-            messagesToSend = [{ role: 'system', content: selectedRole.systemPrompt }, ...messagesToSend];
+            messagesToSend = [
+              { role: 'system', content: selectedRole.systemPrompt },
+              ...messagesToSend,
+            ];
           }
         }
       }
@@ -308,11 +301,7 @@ export default function ChatPage() {
           disabled={!!selectedRoleId} // 当选择了角色时，模型配置由角色决定
         />
 
-        <ChatWindow
-          messages={messages}
-          isThinking={ui.isThinking}
-          isStreaming={isStreaming}
-        />
+        <ChatWindow messages={messages} isThinking={ui.isThinking} isStreaming={isStreaming} />
 
         <ChatInput
           inputMessage={inputMessage}

@@ -8,23 +8,30 @@ interface ModelConfigPanelProps {
   disabled?: boolean; // 当前处于角色模式时，某些配置可能被禁用
 }
 
-const ModelConfigPanel: React.FC<ModelConfigPanelProps> = ({ config, onUpdateConfig, disabled = false }) => {
+const ModelConfigPanel: React.FC<ModelConfigPanelProps> = ({
+  config,
+  onUpdateConfig,
+  disabled = false,
+}) => {
   const handleChange = (field: keyof ModelConfig, value: any) => {
     if (disabled) return;
 
     onUpdateConfig({
       ...config,
-      [field]: value
+      [field]: value,
     });
   };
 
-
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-6">
-      <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-3">LLM Parameters</h3>
-      
+      <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-3">
+        LLM Parameters
+      </h3>
+
       <div className="space-y-2">
-        <label htmlFor="model" className="block text-sm font-medium text-gray-700">Model:</label>
+        <label htmlFor="model" className="block text-sm font-medium text-gray-700">
+          Model:
+        </label>
         <select
           id="model"
           value={config.model}
@@ -39,11 +46,15 @@ const ModelConfigPanel: React.FC<ModelConfigPanelProps> = ({ config, onUpdateCon
           ))}
         </select>
       </div>
-      
+
       <div className="space-y-2">
         <div className="flex justify-between items-center">
-          <label htmlFor="temperature" className="text-sm font-medium text-gray-700">Temperature: {config.temperature.toFixed(2)}</label>
-          <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">{config.temperature.toFixed(2)}</span>
+          <label htmlFor="temperature" className="text-sm font-medium text-gray-700">
+            Temperature: {config.temperature.toFixed(2)}
+          </label>
+          <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
+            {config.temperature.toFixed(2)}
+          </span>
         </div>
         <input
           type="range"
@@ -57,11 +68,15 @@ const ModelConfigPanel: React.FC<ModelConfigPanelProps> = ({ config, onUpdateCon
           disabled={disabled}
         />
       </div>
-      
+
       <div className="space-y-2">
         <div className="flex justify-between items-center">
-          <label htmlFor="top_p" className="text-sm font-medium text-gray-700">Top-P: {config.top_p.toFixed(2)}</label>
-          <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">{config.top_p.toFixed(2)}</span>
+          <label htmlFor="top_p" className="text-sm font-medium text-gray-700">
+            Top-P: {config.top_p.toFixed(2)}
+          </label>
+          <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
+            {config.top_p.toFixed(2)}
+          </span>
         </div>
         <input
           type="range"
@@ -75,11 +90,15 @@ const ModelConfigPanel: React.FC<ModelConfigPanelProps> = ({ config, onUpdateCon
           disabled={disabled}
         />
       </div>
-      
+
       <div className="space-y-2">
         <div className="flex justify-between items-center">
-          <label htmlFor="max_tokens" className="text-sm font-medium text-gray-700">Max Tokens: {config.max_tokens}</label>
-          <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">{config.max_tokens}</span>
+          <label htmlFor="max_tokens" className="text-sm font-medium text-gray-700">
+            Max Tokens: {config.max_tokens}
+          </label>
+          <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
+            {config.max_tokens}
+          </span>
         </div>
         <input
           type="range"

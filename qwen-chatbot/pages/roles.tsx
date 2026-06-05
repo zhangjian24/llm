@@ -5,17 +5,9 @@ import { useRoleContext } from '../contexts/RoleContext';
 import { LoadingState } from '../components/LoadingState';
 import Layout from '../components/Layout';
 
-
 export default function RolesPage() {
-  const {
-    roles,
-    loading,
-    createRole,
-    updateRole,
-    deleteRole,
-    getDefaultRole,
-    setDefaultRole,
-  } = useRoleContext();
+  const { roles, loading, createRole, updateRole, deleteRole, getDefaultRole, setDefaultRole } =
+    useRoleContext();
 
   const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
 

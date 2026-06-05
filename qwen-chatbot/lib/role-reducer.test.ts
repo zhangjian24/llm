@@ -37,10 +37,11 @@ describe('applyRoleCreate', () => {
 describe('applyRoleUpdate', () => {
   it('按 id 匹配替换', () => {
     const r1 = baseRole();
-    const r2 = baseRole({ id: 'r2' });
+    const r2 = baseRole({ id: 'r2', isDefault: false });
     const updated = { ...r1, name: '新名称' };
     const result = applyRoleUpdate([r1, r2], updated);
     expect(result[0].name).toBe('新名称');
+    // r2.isDefault 保持 false（updated 是默认角色，reducer 强制互斥不影响非默认）
     expect(result[1]).toEqual(r2);
   });
 

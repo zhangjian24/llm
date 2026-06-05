@@ -62,9 +62,7 @@ export default function SettingsPage() {
         <div className="max-w-lg mx-auto">
           <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                API Key
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">API Key</label>
               <div className="relative">
                 <input
                   type={showKey ? 'text' : 'password'}
@@ -84,9 +82,7 @@ export default function SettingsPage() {
                   {showKey ? '隐藏' : '显示'}
                 </button>
               </div>
-              <p className="text-xs text-gray-500 mt-1">
-                从阿里云百炼控制台获取
-              </p>
+              <p className="text-xs text-gray-500 mt-1">从阿里云百炼控制台获取</p>
             </div>
 
             <div className="flex gap-3">
@@ -109,9 +105,7 @@ export default function SettingsPage() {
               </button>
             </div>
 
-            {saved && (
-              <p className="text-green-600 text-sm font-medium">✓ 配置已保存</p>
-            )}
+            {saved && <p className="text-green-600 text-sm font-medium">✓ 配置已保存</p>}
 
             {testResult && (
               <p

@@ -19,11 +19,13 @@ export const loadRolesFromStorage = (): Role[] => {
         ...role,
         modelConfig: {
           model: role.modelConfig?.model || 'qwen-max',
-          temperature: typeof role.modelConfig?.temperature === 'number' ? role.modelConfig.temperature : 0.7,
+          temperature:
+            typeof role.modelConfig?.temperature === 'number' ? role.modelConfig.temperature : 0.7,
           top_p: typeof role.modelConfig?.top_p === 'number' ? role.modelConfig.top_p : 0.9,
-          max_tokens: typeof role.modelConfig?.max_tokens === 'number' ? role.modelConfig.max_tokens : 2048,
+          max_tokens:
+            typeof role.modelConfig?.max_tokens === 'number' ? role.modelConfig.max_tokens : 2048,
         },
-        isDefault: !!role.isDefault
+        isDefault: !!role.isDefault,
       }));
 
       // 检查是否有预设角色需要更新
@@ -31,14 +33,14 @@ export const loadRolesFromStorage = (): Role[] => {
       let hasUpdates = false;
 
       // 遍历默认角色，检查是否需要更新现有角色的systemPrompt
-      DEFAULT_ROLES.forEach(defaultRole => {
-        const existingRoleIndex = updatedRoles.findIndex(r => r.id === defaultRole.id);
+      DEFAULT_ROLES.forEach((defaultRole) => {
+        const existingRoleIndex = updatedRoles.findIndex((r) => r.id === defaultRole.id);
         if (existingRoleIndex !== -1) {
           // 如果找到了匹配的角色ID，检查systemPrompt是否需要更新
           if (updatedRoles[existingRoleIndex].systemPrompt !== defaultRole.systemPrompt) {
             updatedRoles[existingRoleIndex] = {
               ...updatedRoles[existingRoleIndex],
-              systemPrompt: defaultRole.systemPrompt // 更新为最新的systemPrompt
+              systemPrompt: defaultRole.systemPrompt, // 更新为最新的systemPrompt
             };
             hasUpdates = true;
           }

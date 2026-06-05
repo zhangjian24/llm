@@ -62,13 +62,27 @@ export function HistoryTable({ history, onEvaluationChange }: Props) {
               <table className="min-w-full divide-y divide-gray-300">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-4">时间</th>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-4">输入</th>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-4">输出</th>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-4 hidden sm:table-cell">模型</th>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-4 hidden md:table-cell">参数</th>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-4 hidden lg:table-cell">Token明细</th>
-                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-4">效果评估</th>
+                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-4">
+                      时间
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-4">
+                      输入
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-4">
+                      输出
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-4 hidden sm:table-cell">
+                      模型
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-4 hidden md:table-cell">
+                      参数
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-4 hidden lg:table-cell">
+                      Token明细
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:px-4">
+                      效果评估
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -83,23 +97,45 @@ export function HistoryTable({ history, onEvaluationChange }: Props) {
                       <td className="px-3 py-3 text-xs sm:text-sm text-gray-900 max-w-[100px] sm:max-w-xs truncate sm:px-4">
                         {truncate(item.output, TRUNCATE_OUTPUT)}
                       </td>
-                      <td className="px-3 py-3 text-xs sm:text-sm text-gray-900 whitespace-nowrap sm:px-4 hidden sm:table-cell">{item.model}</td>
+                      <td className="px-3 py-3 text-xs sm:text-sm text-gray-900 whitespace-nowrap sm:px-4 hidden sm:table-cell">
+                        {item.model}
+                      </td>
                       <td className="px-3 py-3 text-xs sm:text-sm text-gray-500 sm:px-4 hidden md:table-cell">
                         <div className="space-y-1">
-                          <div><span className="font-medium">温度:</span> {item.params.temperature.toFixed(2)}</div>
-                          <div><span className="font-medium">Top-P:</span> {item.params.top_p.toFixed(2)}</div>
-                          <div className="hidden lg:block"><span className="font-medium">最大Tokens:</span> {item.params.max_tokens}</div>
+                          <div>
+                            <span className="font-medium">温度:</span>{' '}
+                            {item.params.temperature.toFixed(2)}
+                          </div>
+                          <div>
+                            <span className="font-medium">Top-P:</span>{' '}
+                            {item.params.top_p.toFixed(2)}
+                          </div>
+                          <div className="hidden lg:block">
+                            <span className="font-medium">最大Tokens:</span>{' '}
+                            {item.params.max_tokens}
+                          </div>
                         </div>
                       </td>
                       <td className="px-3 py-3 text-xs sm:text-sm text-gray-500 sm:px-4 hidden lg:table-cell">
                         {item.tokenUsage ? (
                           <div className="space-y-1">
-                            <div><span className="font-medium">输入:</span> {item.tokenUsage.prompt_tokens}</div>
-                            <div><span className="font-medium">输出:</span> {item.tokenUsage.completion_tokens}</div>
-                            <div><span className="font-medium">总计:</span> {item.tokenUsage.total_tokens}</div>
+                            <div>
+                              <span className="font-medium">输入:</span>{' '}
+                              {item.tokenUsage.prompt_tokens}
+                            </div>
+                            <div>
+                              <span className="font-medium">输出:</span>{' '}
+                              {item.tokenUsage.completion_tokens}
+                            </div>
+                            <div>
+                              <span className="font-medium">总计:</span>{' '}
+                              {item.tokenUsage.total_tokens}
+                            </div>
                           </div>
                         ) : (
-                          <div><span className="text-gray-400">未记录</span></div>
+                          <div>
+                            <span className="text-gray-400">未记录</span>
+                          </div>
                         )}
                       </td>
                       <td className="px-3 py-3 text-xs sm:text-sm sm:px-4">

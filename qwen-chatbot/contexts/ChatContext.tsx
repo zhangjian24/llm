@@ -95,10 +95,12 @@ function loadInitialState(): ChatState {
       conversationHistory: Array.isArray(parsed.conversationHistory)
         ? parsed.conversationHistory
         : defaultState.conversationHistory,
-      inputMessage: typeof parsed.inputMessage === 'string' ? parsed.inputMessage : defaultState.inputMessage,
-      selectedRoleId: typeof parsed.selectedRoleId === 'string' || parsed.selectedRoleId === null
-        ? parsed.selectedRoleId
-        : defaultState.selectedRoleId,
+      inputMessage:
+        typeof parsed.inputMessage === 'string' ? parsed.inputMessage : defaultState.inputMessage,
+      selectedRoleId:
+        typeof parsed.selectedRoleId === 'string' || parsed.selectedRoleId === null
+          ? parsed.selectedRoleId
+          : defaultState.selectedRoleId,
       schemaVersion: SCHEMA_VERSION,
     };
   } catch (err) {
@@ -115,7 +117,6 @@ const ChatContext = createContext<{
 export function ChatProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(chatReducer, undefined, loadInitialState);
   const stateRef = useRef(state);
-  stateRef.current = state;
 
   // 节流持久化：500ms 内的多次状态变更合并为一次写入
   const debouncedPersist = useDebouncedCallback((s: ChatState) => {
@@ -127,6 +128,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   }, PERSIST_DEBOUNCE_MS);
 
   useEffect(() => {
+    // 同步 ref 与 state（仅在 commit 阶段）
+    stateRef.current = state;
     debouncedPersist(state);
   }, [state, debouncedPersist]);
 

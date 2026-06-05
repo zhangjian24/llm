@@ -53,7 +53,7 @@ const TypeWriterEffect: React.FC<TypeWriterEffectProps> = ({
   const memoDisplayed = useMemo(() => displayed, [displayed]);
 
   return (
-    <div className={className}>
+    <div className={className} data-testid="type-writer">
       <MarkdownRenderer>{memoDisplayed}</MarkdownRenderer>
     </div>
   );

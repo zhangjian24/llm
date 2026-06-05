@@ -2,6 +2,7 @@ import Head from 'next/head';
 import { useState, useEffect } from 'react';
 import RoleManager from '../components/RoleManager';
 import { useRoleContext } from '../contexts/RoleContext';
+import { LoadingState } from '../components/LoadingState';
 import Layout from '../components/Layout';
 
 
@@ -32,7 +33,11 @@ export default function RolesPage() {
   }, [roles, loading, selectedRoleId, getDefaultRole]);
 
   if (loading) {
-    return <div className="text-center py-8 text-gray-500">加载中...</div>;
+    return (
+      <Layout>
+        <LoadingState />
+      </Layout>
+    );
   }
 
   return (

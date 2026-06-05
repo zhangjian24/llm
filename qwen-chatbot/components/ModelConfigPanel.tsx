@@ -1,5 +1,6 @@
 import React from 'react';
 import type { ModelConfig } from '../types';
+import { MODEL_OPTIONS } from '../lib/model-options';
 
 interface ModelConfigPanelProps {
   config: ModelConfig;
@@ -10,20 +11,13 @@ interface ModelConfigPanelProps {
 const ModelConfigPanel: React.FC<ModelConfigPanelProps> = ({ config, onUpdateConfig, disabled = false }) => {
   const handleChange = (field: keyof ModelConfig, value: any) => {
     if (disabled) return;
-    
+
     onUpdateConfig({
       ...config,
       [field]: value
     });
   };
 
-  // 预设模型列表 - 根据通义千问官方文档调整
-  const modelOptions = [
-    { value: 'qwen-turbo', label: 'Qwen-Turbo (Fast & Cheap)' },
-    { value: 'qwen-plus', label: 'Qwen-Plus (Balance)' },
-    { value: 'qwen-max', label: 'Qwen-Max (Most Capable)' },
-    // 注意：qwen-max-0102 可能需要特殊权限，如遇404错误请使用 qwen-max
-  ];
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-6">
@@ -38,8 +32,10 @@ const ModelConfigPanel: React.FC<ModelConfigPanelProps> = ({ config, onUpdateCon
           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
           disabled={disabled}
         >
-          {modelOptions.map(option => (
-            <option key={option.value} value={option.value}>{option.label}</option>
+          {MODEL_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
           ))}
         </select>
       </div>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { Role } from '../types';
+import { MODEL_OPTIONS } from '../lib/model-options';
 
 // 默认角色数据
 export const DEFAULT_ROLES: Role[] = [
@@ -369,9 +370,11 @@ const RoleManager: React.FC<RoleManagerProps> = ({
                       onChange={(e) => handleInputChange('modelConfig.model', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
-                      <option value="qwen-turbo">Qwen-Turbo (Fast & Cheap)</option>
-                      <option value="qwen-plus">Qwen-Plus (Balance)</option>
-                      <option value="qwen-max">Qwen-Max (Most Capable)</option>
+                      {MODEL_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
                     </select>
                   </div>
                   

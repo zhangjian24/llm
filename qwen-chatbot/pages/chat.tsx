@@ -12,6 +12,7 @@ import { ConversationHistory, Message } from '../types';
 import HistoryModal from '../components/HistoryModal';
 import Layout from '../components/Layout';
 import { getStoredApiKey } from '../components/useAISettings';
+import { LoadingState } from '../components/LoadingState';
 import { useRouter } from 'next/router';
 
 
@@ -266,7 +267,11 @@ export default function ChatPage() {
   };
 
   if (loading) {
-    return <div className="text-center py-8 text-gray-500">加载中...</div>;
+    return (
+      <Layout>
+        <LoadingState />
+      </Layout>
+    );
   }
 
   return (

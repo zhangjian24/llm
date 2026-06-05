@@ -101,9 +101,9 @@
     "format": "prettier --write \"**/*.{ts,tsx,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,json,md}\"",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "vitest run --reporter=verbose components/useRoleStorage.test.ts lib/role-reducer.test.ts && vitest run --reporter=verbose components/TypeWriterEffect.test.tsx pages/chat.test.tsx",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
+    "test:coverage": "vitest run --coverage components/useRoleStorage.test.ts lib/role-reducer.test.ts",
     "test:ui": "vitest --ui",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui"

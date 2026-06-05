@@ -9,7 +9,7 @@ export default defineConfig({
       'pages/**/*.test.{ts,tsx}',
       'contexts/**/*.test.{ts,tsx}',
     ],
-    environment: 'jsdom',
+    environment: 'happy-dom',
     setupFiles: ['./vitest.setup.ts'],
     globals: true,
     esbuild: {

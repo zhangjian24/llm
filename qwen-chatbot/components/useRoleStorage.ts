@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Role, DEFAULT_ROLES } from './RoleManager';
+import type { Role } from '../types';
+import { DEFAULT_ROLES } from './RoleManager';
 
 const ROLE_STORAGE_KEY = 'qwen_chatbot_roles';
 const DEFAULT_ROLE_ID_KEY = 'qwen_chatbot_default_role_id';

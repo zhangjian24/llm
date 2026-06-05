@@ -1,11 +1,5 @@
 import React from 'react';
-
-interface ModelConfig {
-  model: string;
-  temperature: number;
-  top_p: number;
-  max_tokens: number;
-}
+import type { ModelConfig } from '../types';
 
 interface ModelConfigPanelProps {
   config: ModelConfig;

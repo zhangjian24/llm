@@ -1,5 +1,5 @@
 import React from 'react';
-import { Role } from './RoleManager';
+import type { Role } from '../types';
 
 interface RoleSelectorProps {
   roles: Role[];

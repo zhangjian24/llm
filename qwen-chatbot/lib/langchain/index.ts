@@ -47,44 +47,11 @@ export const createQwenChatModel = (options?: {
 };
 
 /**
- * Qwen聊天模型的配置选项接口
+ * Qwen 聊天类型从 ../../types 导入（保持单一来源）
+ * 同时 re-export 以保持旧 import 路径兼容
  */
-export interface QwenChatOptions {
-  /** 模型名称，如qwen-max, qwen-plus等 */
-  model?: string;
-  /** 生成温度，控制随机性，值越高越随机，默认0.7 */
-  temperature?: number;
-  /** Top-P采样参数，控制生成多样性，默认0.9 */
-  topP?: number;
-  /** 最大生成token数，默认2048 */
-  maxTokens?: number;
-  /** API Key，优先使用传入值，fallback 环境变量 */
-  apiKey?: string;
-}
-
-/**
- * 令牌使用量统计接口
- * 记录API调用过程中输入、输出和总计的token数量
- */
-export interface TokenUsage {
-  /** 输入提示的token数量 */
-  prompt_tokens: number;
-  /** 生成回复的token数量 */
-  completion_tokens: number;
-  /** 总共使用的token数量 */
-  total_tokens: number;
-}
-
-/**
- * 聊天响应接口
- * 定义API调用返回的数据结构
- */
-export interface ChatResponse {
-  /** AI生成的内容 */
-  content: string;
-  /** 令牌使用量统计（可选） */
-  usage?: TokenUsage;
-}
+import type { QwenChatOptions, ChatResponse } from '../../types';
+export type { QwenChatOptions, TokenUsage, ChatResponse } from '../../types';
 
 /**
  * 使用LangChain同步调用Qwen模型

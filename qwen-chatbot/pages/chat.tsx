@@ -6,13 +6,13 @@ import ModelConfigPanel from '../components/ModelConfigPanel';
 import RoleManager from '../components/RoleManager';
 import RoleSelector from '../components/RoleSelector';
 import { useRoleStorage } from '../components/useRoleStorage';
-import { Role } from '../components/RoleManager';
-import { ConversationHistory, Message } from '../types';
+import { ConversationHistory, Message, Role } from '../types';
 import HistoryModal from '../components/HistoryModal';
 import Layout from '../components/Layout';
 import { useAppContext } from '../contexts/AppContext';
 import { getStoredApiKey } from '../components/useAISettings';
 import { useRouter } from 'next/router';
+
 
 
 export default function ChatPage() {

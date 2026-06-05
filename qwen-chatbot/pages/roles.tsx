@@ -2,7 +2,7 @@ import Head from 'next/head';
 import { useState, useEffect } from 'react';
 import RoleManager from '../components/RoleManager';
 import { useRoleStorage } from '../components/useRoleStorage';
-import { Role } from '../components/RoleManager';
+import { Role } from '../types';
 import Layout from '../components/Layout';
 
 

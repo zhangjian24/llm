@@ -5,16 +5,7 @@ import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
 import { AiOutlineRobot, AiOutlineUser } from 'react-icons/ai';
 import ThinkingIndicator from './ThinkingIndicator';
-
-interface Message {
-  role: string;
-  content: string;
-  usage?: {
-    prompt_tokens: number;
-    completion_tokens: number;
-    total_tokens: number;
-  };
-}
+import type { Message } from '../types';
 
 interface ChatWindowProps {
   messages: Message[];

@@ -1,19 +1,5 @@
 import React, { useState, useEffect } from 'react';
-
-// 定义角色数据结构
-export interface Role {
-  id: string;
-  name: string;
-  description: string;
-  systemPrompt: string;
-  modelConfig: {
-    model: string;
-    temperature: number;
-    top_p: number;
-    max_tokens: number;
-  };
-  isDefault: boolean;
-}
+import type { Role } from '../types';
 
 // 默认角色数据
 export const DEFAULT_ROLES: Role[] = [

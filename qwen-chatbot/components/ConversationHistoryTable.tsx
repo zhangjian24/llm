@@ -1,23 +1,5 @@
 import React from 'react';
-
-interface ConversationHistory {
-  id: number;
-  timestamp: string;
-  input: string;
-  output: string;
-  model: string;
-  params: {
-    temperature: number;
-    top_p: number;
-    max_tokens: number;
-  };
-  tokenUsage?: {
-    prompt_tokens: number;
-    completion_tokens: number;
-    total_tokens: number;
-  };
-  evaluation: string;
-}
+import type { ConversationHistory } from '../types';
 
 interface ConversationHistoryTableProps {
   history: ConversationHistory[];

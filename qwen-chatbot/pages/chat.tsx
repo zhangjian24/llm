@@ -1,5 +1,5 @@
 import Head from 'next/head';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import ChatWindow from '../components/ChatWindow';
 import ChatInput from '../components/ChatInput';
 import ModelConfigPanel from '../components/ModelConfigPanel';
@@ -34,6 +34,13 @@ export default function ChatPage() {
   const inputMessage = chatState.inputMessage;
   const conversationHistory = chatState.conversationHistory;
   const selectedRoleId = chatState.selectedRoleId;
+
+  // 流式响应：直接订阅 messages 最后一条，不再维护独立的 currentResponse
+  const lastMessage = useMemo(
+    () => messages[messages.length - 1],
+    [messages]
+  );
+  const isStreaming = ui.isGenerating && lastMessage?.role === 'assistant';
 
   // LLM参数配置
   const [modelConfig, setModelConfig] = useState({
@@ -94,15 +101,17 @@ export default function ChatPage() {
       return;
     }
 
+    // 关键：本地变量 userInput 避免后续异步逻辑读取已清空的 inputMessage
+    const userInput = inputMessage;
+
     // 添加用户消息
-    const userMessage: Message = { role: 'user', content: inputMessage };
+    const userMessage: Message = { role: 'user', content: userInput };
     chatDispatch({ type: 'ADD_MESSAGE', payload: userMessage });
     chatDispatch({ type: 'SET_INPUT_MESSAGE', payload: '' });
 
     // 直接进入思考状态
     ui.setIsThinking(true);
     ui.setIsGenerating(false);
-    ui.setCurrentResponse('');
 
     try {
       // 结束思考，开始生成内容
@@ -187,8 +196,6 @@ export default function ChatPage() {
                 // 更新最后一条消息（即刚添加的空助手消息）
                 currentMessages = [...currentMessages.slice(0, -1), { ...assistantMessage }];
                 chatDispatch({ type: 'SET_MESSAGES', payload: currentMessages });
-                // 同时更新当前响应用于实时显示
-                ui.setCurrentResponse(assistantMessage.content);
               } else if (parsed.usage && typeof parsed.usage === 'object') {
                 // 更新最后一条消息的使用情况
                 assistantMessage.usage = parsed.usage;
@@ -211,7 +218,7 @@ export default function ChatPage() {
         const newHistoryEntry: ConversationHistory = {
           id: Date.now(), // 使用时间戳作为唯一ID
           timestamp: new Date().toISOString(),
-          input: inputMessage,
+          input: userInput,
           output: lastAssistantMessage.content,
           model: modelConfig.model,
           params: {
@@ -233,20 +240,20 @@ export default function ChatPage() {
       }
     } catch (error: any) {
       console.error('Error:', error);
+      const errorMessage = `Error: ${error.message || 'An unknown error occurred'}`;
       chatDispatch({
         type: 'ADD_MESSAGE',
         payload: {
           role: 'assistant',
-          content: `Error: ${error.message || 'An unknown error occurred'}`,
+          content: errorMessage,
         },
       });
 
       // 即使出错也记录历史
-      const errorMessage = `Error: ${error.message || 'An unknown error occurred'}`;
       const newHistoryEntry: ConversationHistory = {
         id: Date.now(), // 使用时间戳作为唯一ID
         timestamp: new Date().toISOString(),
-        input: inputMessage,
+        input: userInput,
         output: errorMessage,
         model: modelConfig.model,
         params: {
@@ -262,7 +269,6 @@ export default function ChatPage() {
     } finally {
       // 生成完成
       ui.setIsGenerating(false);
-      ui.setCurrentResponse('');
     }
   };
 
@@ -305,8 +311,7 @@ export default function ChatPage() {
         <ChatWindow
           messages={messages}
           isThinking={ui.isThinking}
-          isGenerating={ui.isGenerating}
-          currentResponse={ui.currentResponse}
+          isStreaming={isStreaming}
         />
 
         <ChatInput

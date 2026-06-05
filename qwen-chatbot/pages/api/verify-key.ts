@@ -33,6 +33,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         ? '请求频率超限，请稍后重试'
         : error.message || '连接失败';
 
-    return res.status(200).json({ success: false, error: message });
+    // 按 HTTP 语义返回正确的状态码（错误时 200 是不对的）
+    const httpStatus = error.status === 401
+      ? 401
+      : error.status === 429
+        ? 429
+        : 400;
+
+    return res.status(httpStatus).json({ success: false, error: message });
   }
 }

@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import rehypeHighlight from 'rehype-highlight';
+import { MarkdownRenderer } from './MarkdownRenderer';
 
 interface TypeWriterEffectProps {
   text: string;
@@ -63,9 +61,7 @@ const TypeWriterEffect: React.FC<TypeWriterEffectProps> = ({
 
   return (
     <div className={`${className}`}>
-      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
-        {displayedText + (isTyping ? '|' : '')}
-      </ReactMarkdown>
+      <MarkdownRenderer>{displayedText + (isTyping ? '|' : '')}</MarkdownRenderer>
     </div>
   );
 };

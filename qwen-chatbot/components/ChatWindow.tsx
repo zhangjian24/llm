@@ -1,8 +1,6 @@
 import React from 'react';
 import TypeWriterEffect from './TypeWriterEffect';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import rehypeHighlight from 'rehype-highlight';
+import { MarkdownRenderer } from './MarkdownRenderer';
 import { AiOutlineRobot, AiOutlineUser } from 'react-icons/ai';
 import ThinkingIndicator from './ThinkingIndicator';
 import { log } from '../lib/logger';
@@ -15,11 +13,11 @@ interface ChatWindowProps {
   currentResponse?: string;
 }
 
-const ChatWindow: React.FC<ChatWindowProps> = ({ 
-  messages, 
+const ChatWindow: React.FC<ChatWindowProps> = ({
+  messages,
   isThinking = false,
   isGenerating = false,
-  currentResponse = ''
+  currentResponse = '',
 }) => {
   log.debug('ChatWindow received messages:', messages, 'isThinking:', isThinking, 'isGenerating:', isGenerating);
   return (
@@ -32,8 +30,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
       ) : (
         <div className="space-y-4 w-full">
           {messages.map((message, index) => (
-            <div 
-              key={index} 
+            <div
+              key={index}
               className={`flex gap-3 ${message.role.toLowerCase() === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               {message.role.toLowerCase() === 'assistant' ? (
@@ -47,12 +45,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
               )}
               <div className={`max-w-[80%] ${message.role.toLowerCase() === 'user' ? 'bg-blue-500 text-white' : 'bg-white text-gray-800'} rounded-2xl px-4 py-3 shadow-sm`}>
                 {message.role.toLowerCase() === 'assistant' ? (
-                  <ReactMarkdown 
-                    remarkPlugins={[remarkGfm]}
-                    rehypePlugins={[rehypeHighlight]}
-                  >
-                    {message.content || 'AI 正在思考...'}
-                  </ReactMarkdown>
+                  <MarkdownRenderer>{message.content || 'AI 正在思考...'}</MarkdownRenderer>
                 ) : (
                   message.content || '请发送消息'
                 )}
@@ -70,7 +63,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
               </div>
             </div>
           )}
-          
+
           {/* 内容生成阶段 */}
           {isGenerating && currentResponse && (
             <div className="flex gap-3 justify-start">

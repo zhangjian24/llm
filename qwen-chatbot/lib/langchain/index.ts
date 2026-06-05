@@ -8,6 +8,20 @@ import { tools } from "./tools";
 import { ToolMessage } from "@langchain/core/messages";
 import { RunnableWithMessageHistory } from "@langchain/core/runnables";
 import { JsonOutputParser } from "@langchain/core/output_parsers";
+
+/**
+ * LangChain 输出 content 可能是 string 或 MessageContentComplex[]
+ * 统一用类型守卫转字符串，避免多处 `as string` 断言
+ */
+function toStringContent(
+  content: string | Array<{ type: string; text?: string }>
+): string {
+  if (typeof content === 'string') return content;
+  return content
+    .filter((c) => c.type === 'text' && typeof c.text === 'string')
+    .map((c) => c.text as string)
+    .join('');
+}
 /**
  * 创建Qwen聊天模型实例
  * 使用DashScope API兼容OpenAI格式
@@ -76,7 +90,7 @@ export const callQwenChat = async (
   const result = await model.invoke(messages);
   
   return {
-    content: result.content as string,
+    content: toStringContent(result.content),
     usage: result.usage_metadata
       ? {
           prompt_tokens: result.usage_metadata.input_tokens,
@@ -112,7 +126,7 @@ export async function* streamQwenChat(
 
   for await (const chunk of stream) {
     yield {
-      content: chunk.content as string,
+      content: toStringContent(chunk.content),
       usage: chunk.usage_metadata
         ? {
             prompt_tokens: chunk.usage_metadata.input_tokens,
@@ -179,7 +193,7 @@ export const callQwenChatWithTools = async (
     const finalResult = await model.invoke([...messages, result, ...toolMessages]);
     
     return {
-      content: finalResult.content as string,
+      content: toStringContent(finalResult.content),
       usage: finalResult.usage_metadata
         ? {
             prompt_tokens: finalResult.usage_metadata.input_tokens,
@@ -191,7 +205,7 @@ export const callQwenChatWithTools = async (
   }
 
   return {
-    content: result.content as string,
+    content: toStringContent(result.content),
     usage: result.usage_metadata
       ? {
           prompt_tokens: result.usage_metadata.input_tokens,
@@ -258,7 +272,7 @@ export async function* streamQwenChatWithTools(
       const finalResult = await model.invoke([...messages, chunk, ...toolMessages]);
       
       yield {
-        content: finalResult.content as string,
+        content: toStringContent(finalResult.content),
         usage: finalResult.usage_metadata
           ? {
               prompt_tokens: finalResult.usage_metadata.input_tokens,
@@ -269,7 +283,7 @@ export async function* streamQwenChatWithTools(
       };
     } else {
       yield {
-        content: chunk.content as string,
+        content: toStringContent(chunk.content),
         usage: chunk.usage_metadata
           ? {
               prompt_tokens: chunk.usage_metadata.input_tokens,

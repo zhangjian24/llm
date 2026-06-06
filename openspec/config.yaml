@@ -1,0 +1,11 @@
+schema: superpowers-bridge
+
+context: |
+  项目：{project-name}
+  技术栈：{tech-stack}
+
+rules:
+  proposal:
+    - 必须包含回滚方案
+  specs:
+    - 每个 Requirement 必须包含正常/异常 Scenario

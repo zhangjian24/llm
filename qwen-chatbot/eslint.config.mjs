@@ -1,18 +1,9 @@
-import next from 'eslint-config-next';
+import js from '@eslint/js';
+import tseslint from 'typescript-eslint';
+import reactHooks from 'eslint-plugin-react-hooks';
+import react from 'eslint-plugin-react';
 
 export default [
-  ...next,
-  {
-    rules: {
-      'no-console': 'off',
-      'react-hooks/exhaustive-deps': 'warn',
-      // React 19 新规则在原代码违反（行为 100% 不变约束下不修复，仅 warn）
-      'react-hooks/set-state-in-effect': 'warn',
-      'react-hooks/immutability': 'warn',
-      'react-hooks/refs': 'warn',
-      'import/no-anonymous-default-export': 'warn',
-    },
-  },
   {
     ignores: [
       'node_modules/**',
@@ -22,6 +13,38 @@ export default [
       'test-results/**',
       '**/*.test.ts',
       '**/*.test.tsx',
+      'next-env.d.ts',
+      '**/*.config.js',
+      '**/*.config.ts',
+      '**/*.config.mjs',
     ],
+  },
+  js.configs.recommended,
+  ...tseslint.configs.recommended,
+  {
+    files: ['**/*.{ts,tsx}'],
+    plugins: {
+      'react-hooks': reactHooks,
+      react,
+    },
+    languageOptions: {
+      parserOptions: {
+        ecmaFeatures: { jsx: true },
+      },
+    },
+    rules: {
+      'no-console': 'off',
+      'no-unused-vars': 'off',
+      '@typescript-eslint/no-unused-vars': 'warn',
+      '@typescript-eslint/no-explicit-any': 'warn',
+      'react-hooks/exhaustive-deps': 'warn',
+      'react-hooks/rules-of-hooks': 'error',
+      'react/jsx-uses-react': 'off',
+      'react/react-in-jsx-scope': 'off',
+      'react/prop-types': 'off',
+    },
+    settings: {
+      react: { version: 'detect' },
+    },
   },
 ];

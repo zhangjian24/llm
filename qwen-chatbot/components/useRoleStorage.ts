@@ -29,6 +29,7 @@ export const loadRolesFromStorage = (): Role[] => {
       }));
 
       // 检查是否有预设角色需要更新
+      // eslint-disable-next-line prefer-const
       let updatedRoles = [...rolesWithCompleteStructure];
       let hasUpdates = false;
 

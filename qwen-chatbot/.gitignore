@@ -10,3 +10,4 @@ test-results/
 .eslintcache
 .turbo
 .DS_Store
+tsconfig.tsbuildinfo

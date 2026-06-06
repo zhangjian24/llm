@@ -29,6 +29,8 @@ export interface Role {
 
 /** 单条对话消息 */
 export interface Message {
+  /** 可选唯一 ID（用于 React key 稳定 + React.memo 优化） */
+  id?: string;
   role: string;
   content: string;
   usage?: TokenUsage;

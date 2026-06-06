@@ -101,7 +101,7 @@
     "format": "prettier --write \"**/*.{ts,tsx,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,json,md}\"",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --reporter=verbose components/useRoleStorage.test.ts lib/ && vitest run --reporter=verbose __tests__/pages/chat.test.tsx && vitest run --reporter=verbose components/TypeWriterEffect.test.tsx && vitest run --reporter=verbose components/HistoryTable.test.tsx components/LoadingState.test.tsx && vitest run --reporter=verbose components/MarkdownRenderer.test.tsx",
+    "test": "vitest run --reporter=verbose --pool=threads components/useRoleStorage.test.ts lib/ && vitest run --reporter=verbose --pool=threads __tests__/pages/chat.test.tsx && vitest run --reporter=verbose --pool=threads components/TypeWriterEffect.test.tsx && vitest run --reporter=verbose --pool=threads components/HistoryTable.test.tsx components/LoadingState.test.tsx && vitest run --reporter=verbose --pool=threads components/MarkdownRenderer.test.tsx",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage components/useRoleStorage.test.ts lib/ components/HistoryTable.test.tsx components/LoadingState.test.tsx components/MarkdownRenderer.test.tsx components/TypeWriterEffect.test.tsx",
     "test:ui": "vitest --ui",

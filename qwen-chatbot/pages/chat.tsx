@@ -1,19 +1,21 @@
 import Head from 'next/head';
 import { useState, useRef, useEffect, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import ChatWindow from '../components/ChatWindow';
 import ChatInput from '../components/ChatInput';
 import ModelConfigPanel from '../components/ModelConfigPanel';
-import RoleManager from '../components/RoleManager';
 import RoleSelector from '../components/RoleSelector';
 import { useRoleContext } from '../contexts/RoleContext';
 import { useChatContext } from '../contexts/ChatContext';
 import { useUIContext } from '../contexts/UIContext';
 import { ConversationHistory, Message } from '../types';
-import HistoryModal from '../components/HistoryModal';
 import Layout from '../components/Layout';
 import { getStoredApiKey } from '../components/useAISettings';
 import { LoadingState } from '../components/LoadingState';
 import { useRouter } from 'next/router';
+
+// 模态框按需加载（仅点击"查看历史"时挂载）
+const HistoryModal = dynamic(() => import('../components/HistoryModal'), { ssr: false });
 
 export default function ChatPage() {
   const router = useRouter();

@@ -1,9 +1,12 @@
 import Head from 'next/head';
 import { useState, useEffect } from 'react';
-import RoleManager from '../components/RoleManager';
+import dynamic from 'next/dynamic';
 import { useRoleContext } from '../contexts/RoleContext';
 import { LoadingState } from '../components/LoadingState';
 import Layout from '../components/Layout';
+
+// RoleManager 较大（包含表单 + DEFAULT_ROLES），懒加载
+const RoleManager = dynamic(() => import('../components/RoleManager'), { ssr: false });
 
 export default function RolesPage() {
   const { roles, loading, createRole, updateRole, deleteRole, getDefaultRole, setDefaultRole } =

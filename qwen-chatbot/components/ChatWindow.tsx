@@ -40,7 +40,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
               isStreaming && index === lastIndex && message.role === 'assistant';
             return (
               <div
-                key={`msg-${index}-${message.role}`}
+                key={message.id || `msg-${index}-${message.role}`}
                 data-testid={message.role === 'assistant' ? 'assistant-message' : 'user-message'}
                 className={`flex gap-3 ${message.role.toLowerCase() === 'user' ? 'justify-end' : 'justify-start'}`}
               >
@@ -86,4 +86,4 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   );
 };
 
-export default ChatWindow;
+export default React.memo(ChatWindow);

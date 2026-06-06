@@ -47,4 +47,11 @@ export default [
       react: { version: 'detect' },
     },
   },
+  // E2E fixtures 复用 Playwright 的 use() 模式（fixture callbacks），不是 React Hook
+  {
+    files: ['e2e/**/*.{ts,tsx}'],
+    rules: {
+      'react-hooks/rules-of-hooks': 'off',
+    },
+  },
 ];

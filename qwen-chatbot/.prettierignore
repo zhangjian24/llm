@@ -1,13 +1,7 @@
 node_modules/
 .next/
-out/
-build/
 coverage/
 playwright-report/
 test-results/
 *.log
 .env.local
-.eslintcache
-.turbo
-.DS_Store
-tsconfig.tsbuildinfo

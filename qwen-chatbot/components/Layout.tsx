@@ -14,7 +14,7 @@ const Layout: React.FC<LayoutProps> = ({ children, showHistoryModal, onHideHisto
   return (
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      
+
       {/* 汉堡菜单按钮 - 当侧边栏收起时显示 */}
       {!sidebarOpen && (
         <button
@@ -25,11 +25,11 @@ const Layout: React.FC<LayoutProps> = ({ children, showHistoryModal, onHideHisto
           <FiMenu className="w-6 h-6 text-gray-700" />
         </button>
       )}
-      
-      <div className={`flex-1 transition-all duration-300 ${sidebarOpen ? 'lg:ml-64 ml-0' : 'ml-0'} flex flex-col`}>
-        <div className="p-4 sm:p-6 md:p-8 w-full flex-1">
-          {children}
-        </div>
+
+      <div
+        className={`flex-1 transition-all duration-300 ${sidebarOpen ? 'lg:ml-64 ml-0' : 'ml-0'} flex flex-col`}
+      >
+        <div className="p-4 sm:p-6 md:p-8 w-full flex-1">{children}</div>
       </div>
     </div>
   );

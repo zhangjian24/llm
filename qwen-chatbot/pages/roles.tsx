@@ -1,22 +1,14 @@
 import Head from 'next/head';
 import { useState, useEffect } from 'react';
 import RoleManager from '../components/RoleManager';
-import { useRoleStorage } from '../components/useRoleStorage';
-import { Role } from '../components/RoleManager';
+import { useRoleContext } from '../contexts/RoleContext';
+import { LoadingState } from '../components/LoadingState';
 import Layout from '../components/Layout';
 
-
 export default function RolesPage() {
-  const {
-    roles,
-    loading,
-    createRole,
-    updateRole,
-    deleteRole,
-    getDefaultRole,
-    setDefaultRole
-  } = useRoleStorage();
-  
+  const { roles, loading, createRole, updateRole, deleteRole, getDefaultRole, setDefaultRole } =
+    useRoleContext();
+
   const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
 
   // 初始化默认角色
@@ -33,9 +25,13 @@ export default function RolesPage() {
   }, [roles, loading, selectedRoleId, getDefaultRole]);
 
   if (loading) {
-    return <div className="text-center py-8 text-gray-500">加载中...</div>;
+    return (
+      <Layout>
+        <LoadingState />
+      </Layout>
+    );
   }
-  
+
   return (
     <Layout>
       <div className="space-y-6">
@@ -49,7 +45,7 @@ export default function RolesPage() {
           <h1 className="text-3xl font-bold text-gray-800 mb-2">AI角色管理</h1>
           <p className="text-gray-600">创建和管理不同的AI角色，为不同场景定制AI助手</p>
         </header>
-        
+
         <RoleManager
           roles={roles}
           onSelectRole={setSelectedRoleId}

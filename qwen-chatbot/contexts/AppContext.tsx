@@ -1,3 +1,12 @@
+/**
+ * @deprecated 自本拆分后已废弃。请改用：
+ *   - ChatProvider / useChatContext：持久化 messages / conversationHistory / selectedRoleId / inputMessage
+ *   - UIProvider / useUIContext：临时 isThinking / isGenerating / currentResponse / showHistoryModal
+ *   - RoleProvider / useRoleContext：useRoleStorage 的 Context 包装
+ *
+ * 此文件保留仅为外部代码兼容（如第三方插件），新代码不应再使用。
+ * 计划在下一版本（v2）删除。
+ */
 import React, { createContext, useContext, useReducer, ReactNode } from 'react';
 import { Message, ConversationHistory } from '../types';
 
@@ -49,8 +58,12 @@ const getInitialState = (): AppState => {
           ...defaultState,
           ...loadedState,
           // 确保消息数组中的对象格式正确
-          messages: Array.isArray(loadedState.messages) ? loadedState.messages : defaultState.messages,
-          conversationHistory: Array.isArray(loadedState.conversationHistory) ? loadedState.conversationHistory : defaultState.conversationHistory,
+          messages: Array.isArray(loadedState.messages)
+            ? loadedState.messages
+            : defaultState.messages,
+          conversationHistory: Array.isArray(loadedState.conversationHistory)
+            ? loadedState.conversationHistory
+            : defaultState.conversationHistory,
         };
       }
     } catch (err) {
@@ -84,8 +97,8 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
     case 'UPDATE_HISTORY_EVALUATION':
       newState = {
         ...state,
-        conversationHistory: state.conversationHistory.map(item =>
-          item.id === action.payload.id ? { ...item, evaluation: action.payload.evaluation } : item
+        conversationHistory: state.conversationHistory.map((item) =>
+          item.id === action.payload.id ? { ...item, evaluation: action.payload.evaluation } : item,
         ),
       };
       break;
@@ -121,11 +134,7 @@ interface AppProviderProps {
 export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [state, dispatch] = useReducer(appReducer, undefined, getInitialState);
 
-  return (
-    <AppContext.Provider value={{ state, dispatch }}>
-      {children}
-    </AppContext.Provider>
-  );
+  return <AppContext.Provider value={{ state, dispatch }}>{children}</AppContext.Provider>;
 };
 
 // 自定义Hook

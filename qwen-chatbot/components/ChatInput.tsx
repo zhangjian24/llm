@@ -7,14 +7,17 @@ interface ChatInputProps {
   isLoading: boolean;
 }
 
-const ChatInput: React.FC<ChatInputProps> = ({ 
-  inputMessage, 
-  setInputMessage, 
+const ChatInput: React.FC<ChatInputProps> = ({
+  inputMessage,
+  setInputMessage,
   handleSubmit,
-  isLoading
+  isLoading,
 }) => {
   return (
-    <form onSubmit={handleSubmit} className="border-t border-gray-200 bg-white p-4 sticky bottom-0 z-30">
+    <form
+      onSubmit={handleSubmit}
+      className="border-t border-gray-200 bg-white p-4 sticky bottom-0 z-30"
+    >
       <div className="flex items-center gap-3 w-full">
         <textarea
           value={inputMessage}
@@ -24,11 +27,11 @@ const ChatInput: React.FC<ChatInputProps> = ({
           disabled={isLoading}
           rows={1}
         />
-        <button 
-          type="submit" 
+        <button
+          type="submit"
           className={`flex-shrink-0 px-6 py-3 rounded-lg font-medium transition-colors shadow-md min-w-[80px] ${
-            isLoading || !inputMessage.trim() 
-              ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+            isLoading || !inputMessage.trim()
+              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
               : 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800'
           }`}
           disabled={isLoading || !inputMessage.trim()}

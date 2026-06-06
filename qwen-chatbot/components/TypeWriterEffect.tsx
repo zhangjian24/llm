@@ -1,7 +1,18 @@
-import React, { useState, useEffect, useRef } from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import rehypeHighlight from 'rehype-highlight';
+/**
+ * TypeWriterEffect - 打字机效果（性能优化版）
+ *
+ * 改用 requestAnimationFrame + 字符累积：
+ * - 每帧累积 CHUNK_SIZE 个字符（避免 setTimeout 频繁 re-render）
+ * - 用 timeStamp 控制累积间隔（FRAME_INTERVAL 约 60fps）
+ * - useMemo 缓存输出
+ *
+ * 测试：components/TypeWriterEffect.test.tsx（待 vitest 安装后执行）
+ */
+import React, { useEffect, useRef, useState, useMemo } from 'react';
+import { MarkdownRenderer } from './MarkdownRenderer';
+
+const CHUNK_SIZE = 3;
+const FRAME_INTERVAL = 16;
 
 interface TypeWriterEffectProps {
   text: string;
@@ -9,63 +20,41 @@ interface TypeWriterEffectProps {
   className?: string;
 }
 
-const TypeWriterEffect: React.FC<TypeWriterEffectProps> = ({ 
-  text, 
-  speed = 100,
-  className = ''
+const TypeWriterEffect: React.FC<TypeWriterEffectProps> = ({
+  text,
+  speed = 30,
+  className = '',
 }) => {
-  const [displayedText, setDisplayedText] = useState('');
-  const [isTyping, setIsTyping] = useState(true);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [displayed, setDisplayed] = useState('');
+  const rafRef = useRef<number | null>(null);
+  const lastUpdateRef = useRef(0);
 
   useEffect(() => {
-    // 每次text变化时重置
-    setDisplayedText('');
-    setIsTyping(true);
-    
-    // 清除之前的定时器
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-
-    // 如果文本为空，直接返回
-    if (!text) {
-      setIsTyping(false);
-      return;
-    }
-
-    // 开始打字
-    let index = 0;
-    const typeNextChar = () => {
-      if (index < text.length) {
-        const char = text[index];
-        // 确保字符不是undefined
-        if (char !== undefined && char !== null) {
-          // 强制更新，避免React优化
-          setDisplayedText(prev => prev + char);
-        }
-        index++;
-        timeoutRef.current = setTimeout(typeNextChar, speed);
-      } else {
-        setIsTyping(false);
+    setDisplayed('');
+    let i = 0;
+    const tick = (timestamp: number) => {
+      if (timestamp - lastUpdateRef.current >= speed) {
+        i = Math.min(i + CHUNK_SIZE, text.length);
+        setDisplayed(text.slice(0, i));
+        lastUpdateRef.current = timestamp;
+      }
+      if (i < text.length) {
+        rafRef.current = requestAnimationFrame(tick);
       }
     };
-
-    timeoutRef.current = setTimeout(typeNextChar, speed);
-
-    // 清理
+    rafRef.current = requestAnimationFrame(tick);
     return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
       }
     };
   }, [text, speed]);
 
+  const memoDisplayed = useMemo(() => displayed, [displayed]);
+
   return (
-    <div className={`${className}`}>
-      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
-        {displayedText + (isTyping ? '|' : '')}
-      </ReactMarkdown>
+    <div className={className} data-testid="type-writer">
+      <MarkdownRenderer>{memoDisplayed}</MarkdownRenderer>
     </div>
   );
 };

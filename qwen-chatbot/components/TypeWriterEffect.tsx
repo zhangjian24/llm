@@ -1,12 +1,16 @@
 /**
- * TypeWriterEffect - 打字机效果（性能优化版）
+ * TypeWriterEffect - 打字机效果（SSE 流式累积版）
  *
- * 改用 requestAnimationFrame + 字符累积：
+ * 关键设计（修复流式闪烁 bug）：
+ * - useEffect 依赖 [text, speed]，**不**包含 displayed
+ * - 用 displayedRef 跟踪动画进度，RAF tick 内**同时**更新 ref + setDisplayed
+ * - text 变长：从 displayedRef.current.length 持续累积到 text.length（不重启）
+ * - text 变短：直接同步（不做动画回退）
+ * - text === displayedRef.current：跳过 RAF 调度（幂等保护）
  * - 每帧累积 CHUNK_SIZE 个字符（避免 setTimeout 频繁 re-render）
- * - 用 timeStamp 控制累积间隔（FRAME_INTERVAL 约 60fps）
  * - useMemo 缓存输出
  *
- * 测试：components/TypeWriterEffect.test.tsx（待 vitest 安装后执行）
+ * 测试：components/TypeWriterEffect.test.tsx
  */
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { MarkdownRenderer } from './MarkdownRenderer';

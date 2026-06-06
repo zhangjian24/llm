@@ -348,8 +348,9 @@ const RoleManager: React.FC<RoleManagerProps> = ({
 
             <div className="space-y-4 mb-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">角色名称:</label>
+                <label htmlFor="role-form-name" className="block text-sm font-medium text-gray-700 mb-2">角色名称:</label>
                 <input
+                  id="role-form-name"
                   type="text"
                   value={currentRole.name}
                   onChange={(e) => handleInputChange('name', e.target.value)}
@@ -359,8 +360,9 @@ const RoleManager: React.FC<RoleManagerProps> = ({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">角色描述:</label>
+                <label htmlFor="role-form-description" className="block text-sm font-medium text-gray-700 mb-2">角色描述:</label>
                 <textarea
+                  id="role-form-description"
                   value={currentRole.description}
                   onChange={(e) => handleInputChange('description', e.target.value)}
                   placeholder="描述角色的功能和特点"
@@ -370,10 +372,11 @@ const RoleManager: React.FC<RoleManagerProps> = ({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="role-form-system-prompt" className="block text-sm font-medium text-gray-700 mb-2">
                   系统指令 (System Prompt):
                 </label>
                 <textarea
+                  id="role-form-system-prompt"
                   value={currentRole.systemPrompt}
                   onChange={(e) => handleInputChange('systemPrompt', e.target.value)}
                   placeholder="定义AI助手的行为和上下文"
@@ -386,8 +389,9 @@ const RoleManager: React.FC<RoleManagerProps> = ({
                 <label className="block text-sm font-medium text-gray-700 mb-3">模型配置:</label>
                 <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">模型:</label>
+                    <label htmlFor="role-form-model" className="block text-sm font-medium text-gray-700 mb-2">模型:</label>
                     <select
+                      id="role-form-model"
                       value={currentRole.modelConfig.model}
                       onChange={(e) => handleInputChange('modelConfig.model', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -402,14 +406,15 @@ const RoleManager: React.FC<RoleManagerProps> = ({
 
                   <div>
                     <div className="flex justify-between items-center mb-2">
-                      <label className="text-sm font-medium text-gray-700">
+                      <label htmlFor="role-form-temperature" className="text-sm font-medium text-gray-700">
                         Temperature: {currentRole.modelConfig.temperature.toFixed(2)}
                       </label>
-                      <span className="text-sm text-gray-500 bg-gray-200 px-2 py-1 rounded">
+                      <span className="text-sm font-medium text-gray-800 bg-gray-100 px-2 py-1 rounded">
                         {currentRole.modelConfig.temperature.toFixed(2)}
                       </span>
                     </div>
                     <input
+                      id="role-form-temperature"
                       type="range"
                       min="0"
                       max="2"
@@ -424,14 +429,15 @@ const RoleManager: React.FC<RoleManagerProps> = ({
 
                   <div>
                     <div className="flex justify-between items-center mb-2">
-                      <label className="text-sm font-medium text-gray-700">
+                      <label htmlFor="role-form-top-p" className="text-sm font-medium text-gray-700">
                         Top-P: {currentRole.modelConfig.top_p.toFixed(2)}
                       </label>
-                      <span className="text-sm text-gray-500 bg-gray-200 px-2 py-1 rounded">
+                      <span className="text-sm font-medium text-gray-800 bg-gray-100 px-2 py-1 rounded">
                         {currentRole.modelConfig.top_p.toFixed(2)}
                       </span>
                     </div>
                     <input
+                      id="role-form-top-p"
                       type="range"
                       min="0"
                       max="1"
@@ -446,14 +452,15 @@ const RoleManager: React.FC<RoleManagerProps> = ({
 
                   <div>
                     <div className="flex justify-between items-center mb-2">
-                      <label className="text-sm font-medium text-gray-700">
+                      <label htmlFor="role-form-max-tokens" className="text-sm font-medium text-gray-700">
                         Max Tokens: {currentRole.modelConfig.max_tokens}
                       </label>
-                      <span className="text-sm text-gray-500 bg-gray-200 px-2 py-1 rounded">
+                      <span className="text-sm font-medium text-gray-800 bg-gray-100 px-2 py-1 rounded">
                         {currentRole.modelConfig.max_tokens}
                       </span>
                     </div>
                     <input
+                      id="role-form-max-tokens"
                       type="range"
                       min="1"
                       max="8192"
@@ -470,12 +477,13 @@ const RoleManager: React.FC<RoleManagerProps> = ({
 
               <div className="flex items-center">
                 <input
+                  id="role-form-is-default"
                   type="checkbox"
                   checked={currentRole.isDefault}
                   onChange={(e) => handleInputChange('isDefault', e.target.checked)}
                   className="mr-2 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                 />
-                <label className="text-sm text-gray-700">设为默认角色</label>
+                <label htmlFor="role-form-is-default" className="text-sm text-gray-700">设为默认角色</label>
               </div>
             </div>
 

@@ -134,7 +134,7 @@ export function HistoryTable({ history, onEvaluationChange }: Props) {
                           </div>
                         ) : (
                           <div>
-                            <span className="text-gray-400">未记录</span>
+                            <span className="text-gray-500">未记录</span>
                           </div>
                         )}
                       </td>

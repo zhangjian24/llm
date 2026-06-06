@@ -119,7 +119,7 @@ export default function SettingsPage() {
             )}
 
             {hasKey && (
-              <p className="text-xs text-gray-400 pt-2 border-t border-gray-100">
+                <p className="text-xs text-gray-500 pt-2 border-t border-gray-100">
                 当前已配置 API Key
               </p>
             )}

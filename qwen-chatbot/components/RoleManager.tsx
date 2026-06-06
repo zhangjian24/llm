@@ -322,9 +322,27 @@ const RoleManager: React.FC<RoleManagerProps> = ({
       </div>
 
       {showForm && currentRole && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
-            <h3 className="text-xl font-bold text-gray-800 mb-6 border-b pb-3">
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+          onClick={handleCancel}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="role-form-title"
+            className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6"
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                e.preventDefault();
+                handleCancel();
+              }
+            }}
+          >
+            <h3
+              id="role-form-title"
+              className="text-xl font-bold text-gray-800 mb-6 border-b pb-3"
+            >
               {isEditing ? '编辑角色' : '新建角色'}
             </h3>
 

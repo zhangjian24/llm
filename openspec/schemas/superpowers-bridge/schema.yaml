@@ -242,7 +242,11 @@ artifacts:
       - proposal
 
   - id: design-ui
-    generates: design-ui/
+    # NOTE: 用 glob pattern 而非字面目录路径。openspec status 的 outputs.js
+    # 只对 isFile() 返回 done，对目录永远返回 false（schema/CLI mismatch）。
+    # 改用 `design-ui/*.md` 后 fast-glob 能正确匹配设计稿 markdown 占位文件。
+    # 真正的 OpenPencil .op 文件可同时放在 design-ui/ 目录下，archive 时一并保留。
+    generates: design-ui/*.md
     description: UI 设计稿（OpenPencil 格式），从 design.md + specs 生成
     template: design-ui.md
     instruction: |

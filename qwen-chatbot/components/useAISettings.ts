@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { log } from '../lib/logger';
 
 const STORAGE_KEY = 'qwen_chatbot_api_key';
 
@@ -23,7 +24,7 @@ export const useAISettings = () => {
         localStorage.removeItem(STORAGE_KEY);
       }
     } catch (error) {
-      console.error('Error saving API key:', error);
+      log.error('Error saving API key:', error);
     }
   }, []);
 
@@ -32,7 +33,7 @@ export const useAISettings = () => {
     try {
       localStorage.removeItem(STORAGE_KEY);
     } catch (error) {
-      console.error('Error clearing API key:', error);
+      log.error('Error clearing API key:', error);
     }
   }, []);
 

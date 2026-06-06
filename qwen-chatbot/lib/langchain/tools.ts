@@ -2,6 +2,7 @@
 // 定义外部工具，如天气查询功能
 
 import { DynamicTool } from '@langchain/core/tools';
+import { log } from '../logger';
 
 /**
  * 使用Open-Meteo API查询天气的函数
@@ -67,7 +68,7 @@ const getWeatherData = async (latitude: number, longitude: number): Promise<stri
 - 最高温度: ${daily.temperature_2m_max[0]}°C
 - 最低温度: ${daily.temperature_2m_min[0]}°C`;
   } catch (error) {
-    console.error('获取天气数据时出错:', error);
+    log.error('获取天气数据时出错:', error);
     return `获取天气信息失败: ${(error as Error).message}`;
   }
 };
@@ -103,7 +104,7 @@ const getCoordinatesByCity = async (
 
     return null;
   } catch (error) {
-    console.error('获取城市坐标时出错:', error);
+    log.error('获取城市坐标时出错:', error);
     return null;
   }
 };
@@ -128,7 +129,7 @@ export const weatherTool = new DynamicTool({
       // 使用坐标查询天气
       return await getWeatherData(coordinates.latitude, coordinates.longitude);
     } catch (error) {
-      console.error('天气查询工具执行出错:', error);
+      log.error('天气查询工具执行出错:', error);
       return `天气查询失败: ${(error as Error).message}`;
     }
   },

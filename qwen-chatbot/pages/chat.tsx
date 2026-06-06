@@ -13,6 +13,7 @@ import Layout from '../components/Layout';
 import { getStoredApiKey } from '../components/useAISettings';
 import { LoadingState } from '../components/LoadingState';
 import { useRouter } from 'next/router';
+import { log } from '../lib/logger';
 
 // 模态框按需加载（仅点击"查看历史"时挂载）
 const HistoryModal = dynamic(() => import('../components/HistoryModal'), { ssr: false });
@@ -201,7 +202,7 @@ export default function ChatPage() {
               }
             } catch (e) {
               // 忽略无法解析的数据行
-              console.error('Error parsing data:', e);
+              log.error('Error parsing data:', e);
             }
           }
         }
@@ -236,7 +237,7 @@ export default function ChatPage() {
         chatDispatch({ type: 'ADD_TO_HISTORY', payload: newHistoryEntry }); // 添加到历史记录开头
       }
     } catch (error) {
-      console.error('Error:', error);
+      log.error('Chat stream error:', error);
       const errorMessage = `Error: ${(error as Error).message || 'An unknown error occurred'}`;
       chatDispatch({
         type: 'ADD_MESSAGE',

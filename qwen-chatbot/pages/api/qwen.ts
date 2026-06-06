@@ -10,6 +10,7 @@ import {
   streamQwenChatWithTools,
 } from '../../lib/langchain';
 import type { QwenChatOptions } from '../../types';
+import { log } from '../../lib/logger';
 
 /**
  * 通义千问API路由处理函数
@@ -127,7 +128,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return;
       } catch (error) {
         // 记录错误并发送错误信息给客户端
-        console.error('Stream processing error:', error);
+        log.error('Stream processing error:', error);
         const errorMessage = `data: ${JSON.stringify({ error: (error as Error).message || 'AI service error' })}\n\n`;
         res.write(errorMessage);
         res.end();
@@ -147,7 +148,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   } catch (error) {
     // 记录错误信息
-    console.error('Error calling Qwen API with LangChain:', error);
+    log.error('Error calling Qwen API with LangChain:', error);
 
     // 初始化错误信息和状态码
     let errorMessage = 'An error occurred while calling the API';

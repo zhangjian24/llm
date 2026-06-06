@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { applyRoleCreate, applyRoleUpdate, applyRoleDelete } from '../lib/role-reducer';
 import type { Role } from '../types';
 import { DEFAULT_ROLES } from './RoleManager';
+import { log } from '../lib/logger';
 
 const ROLE_STORAGE_KEY = 'qwen_chatbot_roles';
 const DEFAULT_ROLE_ID_KEY = 'qwen_chatbot_default_role_id';
@@ -70,7 +71,7 @@ export const loadRolesFromStorage = (): Role[] => {
       return updatedRoles;
     }
   } catch (error) {
-    console.error('Error loading roles from storage:', error);
+    log.error('Error loading roles from storage:', error);
   }
 
   return DEFAULT_ROLES;
@@ -83,7 +84,7 @@ export const saveRolesToStorage = (roles: Role[]): void => {
   try {
     localStorage.setItem(ROLE_STORAGE_KEY, JSON.stringify(roles));
   } catch (error) {
-    console.error('Error saving roles to storage:', error);
+    log.error('Error saving roles to storage:', error);
   }
 };
 
@@ -94,7 +95,7 @@ export const getDefaultRoleId = (): string | null => {
   try {
     return localStorage.getItem(DEFAULT_ROLE_ID_KEY);
   } catch (error) {
-    console.error('Error getting default role ID from storage:', error);
+    log.error('Error getting default role ID from storage:', error);
     return null;
   }
 };
@@ -110,7 +111,7 @@ export const saveDefaultRoleId = (roleId: string | null): void => {
       localStorage.removeItem(DEFAULT_ROLE_ID_KEY);
     }
   } catch (error) {
-    console.error('Error saving default role ID to storage:', error);
+    log.error('Error saving default role ID to storage:', error);
   }
 };
 
@@ -201,7 +202,7 @@ export const useRoleStorage = () => {
         return result;
       } catch {
         // 拒绝删最后一个角色时保持原状态
-        console.warn('Cannot delete the last role');
+        log.warn('Cannot delete the last role');
         return prev;
       }
     });

@@ -1,11 +1,15 @@
 schema: superpowers-bridge
 
 context: |
-  项目：{project-name}
-  技术栈：{tech-stack}
+  项目：llm 仓库（含 document-qa-system / qwen-chatbot / edu-ai-platform 子项目）。
+  项目事实（子项目结构、测试栈、阈值、commit 规范、命名约定）见仓库根 AGENTS.md "项目事实" 章节。
+  SKILL.md / WORKFLOW.md 中如出现项目特定内容，以 AGENTS.md 为准。
 
 rules:
   proposal:
     - 必须包含回滚方案
+    - 标注影响的模块范围
+    - 说明数据库变更影响
   specs:
     - 每个 Requirement 必须包含正常/异常 Scenario
+    - 标注涉及的表和 API

@@ -640,7 +640,6 @@ apply:
        Confirm each appears in your available skills list before
        proceeding:
 
-       - superpowers:using-git-worktrees
        - superpowers:subagent-driven-development
          (transitively: superpowers:test-driven-development,
                         superpowers:requesting-code-review)
@@ -660,9 +659,25 @@ apply:
        may have a fallback. Print the missing list once at apply
        start so the user isn't surprised mid-cycle.
 
-    1. **Workspace**: Use the Skill tool to invoke
-       **superpowers:using-git-worktrees** to create an isolated
-       git worktree for this change.
+    1. **Workspace already exists (do NOT recreate)**:
+
+       The change was created via `/opsx:new`, which already
+       created an isolated git worktree at
+       `.worktrees/<change-name>-<ts>/` on branch
+       `<change-name>-<ts>` (same as change name).
+
+       **Verify** with:
+       ```bash
+       GIT_DIR=$(cd "$(git rev-parse --git-dir)" 2>/dev/null && pwd -P)
+       GIT_COMMON=$(cd "$(git rev-parse --git-common-dir)" 2>/dev/null && pwd -P)
+       [ "$GIT_DIR" != "$GIT_COMMON" ] || \
+         { echo "❌ Not in a worktree. cd .worktrees/<change-name>/"; exit 1; }
+       [ -d openspec/changes/<change-name> ] || \
+         { echo "❌ Change directory missing. /opsx:new may have failed."; exit 1; }
+       ```
+
+       Do NOT call `using-git-worktrees` again in this phase —
+       that skill is invoked by `openspec-new-change`.
 
     2. **Executor — subagent-driven-development**:
 
@@ -674,6 +689,7 @@ apply:
        - Read plan.md in this change directory for micro-tasks
        - Update tasks.md checkboxes as coarse tasks complete
        - Work within the created worktree
+       - **ENFORCE commit density** (see section 2.1 below)
 
        IMPORTANT — transitive skill activation:
        subagent-driven-development internally enforces the
@@ -695,10 +711,48 @@ apply:
        If your platform lacks subagent support, use the built-in
        `spec-driven` schema instead of this one.
 
-    3. **Verification**: When all tasks are done, produce the
-       `verify` artifact by invoking **openspec-verify-change**
-       to check completeness, correctness, and coherence.
-       Re-run verify until all blocking issues are resolved.
+    2.1. **Commit density enforcement (mechanism, project-agnostic)**:
+
+       Each plan.md task MUST produce at least 2 commits. The exact
+       commit message format and prefix vocabulary are project-specific
+       (see `AGENTS.md "commit 规范"`); this schema only enforces the
+       density rule (≥ 2 commits per task), not the specific prefixes.
+
+       The two required commits per task follow TDD discipline:
+       1. **RED commit** — failing test, confirmed failing
+       2. **GREEN commit** — minimal implementation, test passes
+       3. **REFACTOR commit** — optional 3rd commit, no test regression
+
+       **Density check at apply end** (mechanism, project-agnostic):
+       ```bash
+       TOTAL_TASKS=$(grep -c '^- \[' openspec/changes/<name>/tasks.md)
+       TOTAL_COMMITS=$(git log main..HEAD --oneline | wc -l)
+       [ "$TOTAL_COMMITS" -ge $((2 * TOTAL_TASKS)) ] || \
+         echo "⚠️ Commit density warning: $TOTAL_COMMITS < 2*$TOTAL_TASKS"
+       ```
+
+       This is enforced by `openspec-apply-change` SKILL Step 3-5
+       and surfaced as a warning (not blocker) in apply, but blocks
+       archive if not satisfied.
+
+    3. **Verification (4-class full test + openspec 7-item)**:
+
+       When all tasks are done, invoke **openspec-verify-change**
+       to run the FULL test suite:
+       - **Lint**: per-subproject (`pnpm lint` / `ruff check`)
+       - **Type check**: per-subproject (`pnpm typecheck` / `mypy`)
+       - **Unit + coverage threshold**: enforced
+         (backend 60% / frontend 60% / qwen-chatbot 65%)
+       - **E2E**: per-subproject (`pnpm exec playwright test`)
+       - **OpenSpec 7-item check**: structural validate, task
+         completion, delta spec sync, design/specs coherence,
+         implementation signal, front-door routing leak detector,
+         deferred-dogfood vs automated-test equivalence
+
+       All 4 test classes MUST pass before archive. Coverage
+       threshold failure is blocking. Lint / typecheck / e2e
+       failure is blocking. Re-run verify until all blocking
+       issues are resolved.
 
     4. **Retrospective (write while context is hot)**:
 

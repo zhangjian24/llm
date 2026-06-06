@@ -13,7 +13,7 @@ const ModelConfigPanel: React.FC<ModelConfigPanelProps> = ({
   onUpdateConfig,
   disabled = false,
 }) => {
-  const handleChange = (field: keyof ModelConfig, value: any) => {
+  const handleChange = (field: keyof ModelConfig, value: string | number) => {
     if (disabled) return;
 
     onUpdateConfig({

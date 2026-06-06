@@ -238,7 +238,7 @@ const RoleManager: React.FC<RoleManagerProps> = ({
     setCurrentRole(null);
   };
 
-  const handleInputChange = (field: string, value: any) => {
+  const handleInputChange = (field: string, value: string | number | boolean) => {
     if (!currentRole) return;
 
     setCurrentRole((prev) => {
@@ -304,7 +304,7 @@ const RoleManager: React.FC<RoleManagerProps> = ({
                   </button>
                 )}
                 <button
-                  onClick={(e) => handleEdit(role)}
+                  onClick={() => handleEdit(role)}
                   className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
                 >
                   编辑

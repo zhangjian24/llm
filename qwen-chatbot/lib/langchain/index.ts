@@ -3,11 +3,9 @@
 // 包含同步和流式调用的封装，以及token使用量统计功能
 
 import { ChatOpenAI } from '@langchain/openai';
-import { BaseMessage, HumanMessage, SystemMessage, AIMessage } from '@langchain/core/messages';
+import { BaseMessage } from '@langchain/core/messages';
 import { tools } from './tools';
 import { ToolMessage } from '@langchain/core/messages';
-import { RunnableWithMessageHistory } from '@langchain/core/runnables';
-import { JsonOutputParser } from '@langchain/core/output_parsers';
 
 /**
  * LangChain 输出 content 可能是 string 或 MessageContentComplex[]
@@ -63,7 +61,7 @@ export const createQwenChatModel = (options?: {
  * 同时 re-export 以保持旧 import 路径兼容
  */
 import type { QwenChatOptions, ChatResponse } from '../../types';
-export type { QwenChatOptions, TokenUsage, ChatResponse } from '../../types';
+export type { TokenUsage, ChatResponse } from '../../types';
 
 /**
  * 使用LangChain同步调用Qwen模型

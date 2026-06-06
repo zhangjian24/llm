@@ -23,7 +23,7 @@ export default function ChatPage() {
   // 新 Context 拆分：持久化 + 临时 UI 状态分离
   const { state: chatState, dispatch: chatDispatch } = useChatContext();
   const ui = useUIContext();
-  const { roles, loading, getDefaultRole, setDefaultRole } = useRoleContext();
+  const { roles, loading, getDefaultRole } = useRoleContext();
 
   const messages = chatState.messages;
   const inputMessage = chatState.inputMessage;
@@ -66,6 +66,8 @@ export default function ChatPage() {
         setModelConfig(roles[0].modelConfig);
       }
     }
+    // chatDispatch 在 useReducer 中引用稳定，故省略
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roles, loading, selectedRoleId, getDefaultRole]);
 
   // 处理角色切换
@@ -233,9 +235,9 @@ export default function ChatPage() {
 
         chatDispatch({ type: 'ADD_TO_HISTORY', payload: newHistoryEntry }); // 添加到历史记录开头
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error:', error);
-      const errorMessage = `Error: ${error.message || 'An unknown error occurred'}`;
+      const errorMessage = `Error: ${(error as Error).message || 'An unknown error occurred'}`;
       chatDispatch({
         type: 'ADD_MESSAGE',
         payload: {

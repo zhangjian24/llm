@@ -8,8 +8,8 @@ import {
   streamQwenChat,
   callQwenChatWithTools,
   streamQwenChatWithTools,
-  QwenChatOptions,
 } from '../../lib/langchain';
+import type { QwenChatOptions } from '../../types';
 
 /**
  * 通义千问API路由处理函数
@@ -44,7 +44,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     // 将消息数组转换为LangChain兼容的格式
     // 根据消息角色创建相应的LangChain消息对象
-    const langchainMessages = messages.map((msg: any) => {
+    const langchainMessages = messages.map((msg: { role: string; content: string }) => {
       if (msg.role === 'system') {
         // 系统消息 - 用于设定助手的行为和上下文
         return new SystemMessage(msg.content);
@@ -62,7 +62,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // 构建模型调用选项
     // 使用传入的参数或环境变量中的默认值
-    const options = {
+    const options: QwenChatOptions = {
       model: model || process.env.MODEL_NAME || 'qwen-max', // 模型名称
       temperature, // 生成温度
       topP: top_p, // Top-p采样参数
@@ -72,7 +72,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // 检查是否需要使用工具调用
     const needsTools = messages.some(
-      (msg: any) =>
+      (msg: { content: string }) =>
         msg.content &&
         typeof msg.content === 'string' &&
         (msg.content.toLowerCase().includes('天气') ||
@@ -125,10 +125,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         res.write('data: [DONE]\n\n');
         res.end();
         return;
-      } catch (error: any) {
+      } catch (error) {
         // 记录错误并发送错误信息给客户端
         console.error('Stream processing error:', error);
-        const errorMessage = `data: ${JSON.stringify({ error: error.message || 'AI service error' })}\n\n`;
+        const errorMessage = `data: ${JSON.stringify({ error: (error as Error).message || 'AI service error' })}\n\n`;
         res.write(errorMessage);
         res.end();
         return;
@@ -145,42 +145,43 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         usage: result.usage, // token使用量统计
       });
     }
-  } catch (error: any) {
+  } catch (error) {
     // 记录错误信息
     console.error('Error calling Qwen API with LangChain:', error);
 
     // 初始化错误信息和状态码
     let errorMessage = 'An error occurred while calling the API';
     let statusCode = 500;
+    const err = error as { status?: number; message?: string };
 
     // 根据错误状态码设置具体的错误信息
-    if (error.status === 401) {
+    if (err.status === 401) {
       // 认证失败
       errorMessage = 'Authentication failed. Please check your API key.';
       statusCode = 401;
-    } else if (error.status === 403) {
+    } else if (err.status === 403) {
       // 访问被拒绝
       errorMessage = 'Access forbidden. Please check your API permissions.';
       statusCode = 403;
-    } else if (error.status === 429) {
+    } else if (err.status === 429) {
       // 请求频率超限
       errorMessage = 'Rate limit exceeded. Please try again later.';
       statusCode = 429;
-    } else if (error.status === 404 && error.message.includes('model')) {
+    } else if (err.status === 404 && err.message?.includes('model')) {
       // 模型未找到
       errorMessage =
         'Model not found or access denied. Please check the model name and your API permissions. Try using "qwen-max" instead of "qwen-max-0102".';
       statusCode = 404;
-    } else if (error.message) {
+    } else if (err.message) {
       // 其他错误
-      errorMessage = error.message;
+      errorMessage = err.message;
     }
 
     // 返回错误响应
     res.status(statusCode).json({
       error: errorMessage, // 错误信息
       // 在开发环境中返回详细的错误信息
-      details: process.env.NODE_ENV === 'development' ? error.toString() : undefined,
+      details: process.env.NODE_ENV === 'development' ? String(error) : undefined,
     });
   }
 }

@@ -6,6 +6,20 @@ import { DEFAULT_ROLES } from './RoleManager';
 const ROLE_STORAGE_KEY = 'qwen_chatbot_roles';
 const DEFAULT_ROLE_ID_KEY = 'qwen_chatbot_default_role_id';
 
+interface StoredRoleShape {
+  id: string;
+  name: string;
+  description: string;
+  systemPrompt: string;
+  modelConfig?: {
+    model?: string;
+    temperature?: number;
+    top_p?: number;
+    max_tokens?: number;
+  };
+  isDefault?: boolean;
+}
+
 // 从 localStorage 加载角色数据
 export const loadRolesFromStorage = (): Role[] => {
   if (typeof window === 'undefined') return [];
@@ -13,9 +27,9 @@ export const loadRolesFromStorage = (): Role[] => {
   try {
     const storedRoles = localStorage.getItem(ROLE_STORAGE_KEY);
     if (storedRoles) {
-      const parsedRoles = JSON.parse(storedRoles);
+      const parsedRoles: StoredRoleShape[] = JSON.parse(storedRoles);
       // 确保所有角色都有完整的结构
-      const rolesWithCompleteStructure = parsedRoles.map((role: any) => ({
+      const rolesWithCompleteStructure = parsedRoles.map((role: StoredRoleShape) => ({
         ...role,
         modelConfig: {
           model: role.modelConfig?.model || 'qwen-max',
@@ -185,7 +199,7 @@ export const useRoleStorage = () => {
           }
         });
         return result;
-      } catch (e) {
+      } catch {
         // 拒绝删最后一个角色时保持原状态
         console.warn('Cannot delete the last role');
         return prev;

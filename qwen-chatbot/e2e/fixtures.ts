@@ -12,7 +12,6 @@ export const test = base.extend<{
   mockQwenAPI: async ({ page }, use) => {
     await use(async (chunks: string[]) => {
       await page.route('**/api/qwen', async (route) => {
-        const body = JSON.stringify({ prompt_tokens: 10, completion_tokens: chunks.join('').length / 2, total_tokens: 20 });
         const sse = chunks.map((c) => `data: ${JSON.stringify({ content: c })}\n\n`).join('') +
           `data: ${JSON.stringify({ done: true, usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 } })}\n\n`;
         await route.fulfill({

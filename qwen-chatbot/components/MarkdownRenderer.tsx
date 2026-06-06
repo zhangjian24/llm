@@ -6,6 +6,7 @@
  * - 减少 4 处重复引入
  */
 import { useMemo } from 'react';
+import type { AnchorHTMLAttributes } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
@@ -18,7 +19,9 @@ interface Props {
 export function MarkdownRenderer({ children, className }: Props) {
   const components = useMemo(
     () => ({
-      a: ({ ...props }: any) => <a {...props} target="_blank" rel="noopener noreferrer" />,
+      a: ({ ...props }: AnchorHTMLAttributes<HTMLAnchorElement>) => (
+        <a {...props} target="_blank" rel="noopener noreferrer" />
+      ),
     }),
     [],
   );

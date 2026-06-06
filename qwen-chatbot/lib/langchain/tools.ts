@@ -1,7 +1,6 @@
 // lib/langchain/tools.ts
 // 定义外部工具，如天气查询功能
 
-import { z } from 'zod';
 import { DynamicTool } from '@langchain/core/tools';
 
 /**

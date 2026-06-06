@@ -1,14 +1,12 @@
 import React, { useState } from 'react';
 import Sidebar from './Sidebar';
-import { FiMenu, FiX } from 'react-icons/fi';
+import { FiMenu } from 'react-icons/fi';
 
 interface LayoutProps {
   children: React.ReactNode;
-  showHistoryModal?: boolean;
-  onHideHistoryModal?: () => void;
 }
 
-const Layout: React.FC<LayoutProps> = ({ children, showHistoryModal, onHideHistoryModal }) => {
+const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   return (

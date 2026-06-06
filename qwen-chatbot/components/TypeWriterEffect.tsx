@@ -12,7 +12,6 @@ import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { MarkdownRenderer } from './MarkdownRenderer';
 
 const CHUNK_SIZE = 3;
-const FRAME_INTERVAL = 16;
 
 interface TypeWriterEffectProps {
   text: string;

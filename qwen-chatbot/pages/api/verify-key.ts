@@ -26,16 +26,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await model.invoke([{ role: 'user', content: 'ping' }]);
 
     return res.status(200).json({ success: true });
-  } catch (error: any) {
+  } catch (error) {
+    const err = error as { status?: number; message?: string };
     const message =
-      error.status === 401
+      err.status === 401
         ? 'API Key 无效，请检查后重试'
-        : error.status === 429
+        : err.status === 429
           ? '请求频率超限，请稍后重试'
-          : error.message || '连接失败';
+          : err.message || '连接失败';
 
     // 按 HTTP 语义返回正确的状态码（错误时 200 是不对的）
-    const httpStatus = error.status === 401 ? 401 : error.status === 429 ? 429 : 400;
+    const httpStatus = err.status === 401 ? 401 : err.status === 429 ? 429 : 400;
 
     return res.status(httpStatus).json({ success: false, error: message });
   }

@@ -25,16 +25,30 @@ const TypeWriterEffect: React.FC<TypeWriterEffectProps> = ({
   className = '',
 }) => {
   const [displayed, setDisplayed] = useState('');
+  const displayedRef = useRef('');
   const rafRef = useRef<number | null>(null);
   const lastUpdateRef = useRef(0);
 
   useEffect(() => {
-    setDisplayed('');
-    let i = 0;
+    if (text === '') {
+      displayedRef.current = '';
+      setDisplayed('');
+      return;
+    }
+    if (displayedRef.current.length > text.length || displayedRef.current === text) {
+      if (displayedRef.current !== text) {
+        displayedRef.current = text;
+        setDisplayed(text);
+      }
+      return;
+    }
+    let i = displayedRef.current.length;
     const tick = (timestamp: number) => {
       if (timestamp - lastUpdateRef.current >= speed) {
         i = Math.min(i + CHUNK_SIZE, text.length);
-        setDisplayed(text.slice(0, i));
+        const next = text.slice(0, i);
+        displayedRef.current = next;
+        setDisplayed(next);
         lastUpdateRef.current = timestamp;
       }
       if (i < text.length) {

@@ -7,7 +7,8 @@
  * - text 变长：从 displayedRef.current.length 持续累积到 text.length（不重启）
  * - text 变短：直接同步（不做动画回退）
  * - text === displayedRef.current：跳过 RAF 调度（幂等保护）
- * - 每帧累积 CHUNK_SIZE 个字符（避免 setTimeout 频繁 re-render）
+ * - 每帧累积 1 个字符（CHUNK_SIZE=1，打字机效果）
+ * - 速度默认 50ms/字符（20 字符/秒，肉眼明显）
  * - useMemo 缓存输出
  *
  * 测试：components/TypeWriterEffect.test.tsx
@@ -15,7 +16,7 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { MarkdownRenderer } from './MarkdownRenderer';
 
-const CHUNK_SIZE = 3;
+const CHUNK_SIZE = 1;
 
 interface TypeWriterEffectProps {
   text: string;
@@ -25,7 +26,7 @@ interface TypeWriterEffectProps {
 
 const TypeWriterEffect: React.FC<TypeWriterEffectProps> = ({
   text,
-  speed = 30,
+  speed = 50,
   className = '',
 }) => {
   const [displayed, setDisplayed] = useState('');

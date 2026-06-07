@@ -12,18 +12,20 @@ N/A — Purpose 段不修改，archive 时保持 openspec/specs/streaming-chat/s
 
 ### Requirement: TypeWriterEffect 性能优化
 
+Requirement text: 用户流式响应过程中 MUST 流畅不卡顿。
+
 **User Story**: As a 用户，I want 流式响应流畅不卡顿 so that 长时间对话体验良好。
 
 **Priority**: P1
 
 **Acceptance**: 该 spec MUST: 1000 字符文本打字机期间，主线程长任务 ≤ 50ms。
 
-**Non-functional**: 性能：单次 RAF 周期内 `setDisplayedText` 调用 ≤ 1 次
+**Non-functional**: 性能：单次 RAF 周期内 MUST 最多调用 `setDisplayedText` 1 次
 
 `<TypeWriterEffect>` MUST 满足：
 
-1. 使用 `requestAnimationFrame` 替代 `setTimeout` 触发字符累积
-2. 每次 RAF 内累积 `CHUNK_SIZE = 3` 字符（非单字符）
+1. MUST 使用 `requestAnimationFrame` 替代 `setTimeout` 触发字符累积
+2. MUST 每次 RAF 内累积 `CHUNK_SIZE = 3` 字符（非单字符）
 3. 文本变化时 MUST 立即取消上一帧的 RAF，避免竞态
 4. 文本清空时 MUST 跳过 RAF，直接退出打字状态
 5. `ReactMarkdown` 解析 MUST 通过 `useMemo` 缓存稳定文本
@@ -76,4 +78,4 @@ N/A — Purpose 段不修改，archive 时保持 openspec/specs/streaming-chat/s
 - **GIVEN** 10000 字符长文本
 - **WHEN** 持续打字
 - **THEN** 主线程长任务（> 50ms）次数 MUST ≤ 1
-- **AND** 视觉上每帧推进 3 字符
+- **AND** 视觉上 MUST 每帧推进 3 字符

@@ -1,15 +1,15 @@
 /**
- * TypeWriterEffect - 打字机效果（SSE 流式累积版）
+ * TypeWriterEffect - 打字机效果（持续 RAF 循环版，修复 SSE 竞态）
  *
- * 关键设计（修复流式闪烁 bug）：
- * - useEffect 依赖 [text, speed]，**不**包含 displayed
- * - 用 displayedRef 跟踪动画进度，RAF tick 内**同时**更新 ref + setDisplayed
- * - text 变长：从 displayedRef.current.length 持续累积到 text.length（不重启）
+ * 关键设计（解决流式闪烁/全蹦 bug）：
+ * - 使用 textRef/speedRef 存储最新 props，每次 render 同步更新（无重渲染）
+ * - useEffect 依赖 []，仅挂载时启动一次 RAF 循环，**永不因 text 变化重启**
+ * - RAF tick 内读取 textRef.current 获取最新文本，累积到 displayedRef
+ * - lastUpdateRef 控制打字速度，与 text 变化完全解耦
+ * - text 变空：同步重置 displayedRef
  * - text 变短：直接同步（不做动画回退）
- * - text === displayedRef.current：跳过 RAF 调度（幂等保护）
- * - 每帧累积 1 个字符（CHUNK_SIZE=1，打字机效果）
- * - 速度默认 50ms/字符（20 字符/秒，肉眼明显）
- * - useMemo 缓存输出
+ * - 组件卸载时才取消 RAF
+ * - CHUNK_SIZE=1，speed=50ms（20 字符/秒，肉眼可见）
  *
  * 测试：components/TypeWriterEffect.test.tsx
  */
@@ -31,42 +31,72 @@ const TypeWriterEffect: React.FC<TypeWriterEffectProps> = ({
 }) => {
   const [displayed, setDisplayed] = useState('');
   const displayedRef = useRef('');
+  const textRef = useRef(text);
+  const speedRef = useRef(speed);
   const rafRef = useRef<number | null>(null);
   const lastUpdateRef = useRef(0);
 
+  // 每次 render 同步更新 refs（同步操作，不触发重渲染）
+  textRef.current = text;
+  speedRef.current = speed;
+
+  // 处理 text 变空或变短：同步重置/同步
   useEffect(() => {
     if (text === '') {
       displayedRef.current = '';
       setDisplayed('');
-      return;
+    } else if (displayedRef.current.length > text.length) {
+      // text 变短：直接同步到新文本（不做动画回退）
+      displayedRef.current = text;
+      setDisplayed(text);
     }
-    if (displayedRef.current.length > text.length || displayedRef.current === text) {
-      if (displayedRef.current !== text) {
-        displayedRef.current = text;
-        setDisplayed(text);
-      }
-      return;
-    }
-    let i = displayedRef.current.length;
-    const tick = (timestamp: number) => {
-      if (timestamp - lastUpdateRef.current >= speed) {
-        i = Math.min(i + CHUNK_SIZE, text.length);
-        const next = text.slice(0, i);
-        displayedRef.current = next;
-        setDisplayed(next);
-        lastUpdateRef.current = timestamp;
-      }
-      if (i < text.length) {
+  }, [text]);
+
+  // 挂载时启动一次持续 RAF 循环，卸载时清理
+  useEffect(() => {
+    const tick = () => {
+      const currentText = textRef.current;
+      const currentSpeed = speedRef.current;
+
+      // 文本为空：保持空状态，继续检查
+      if (currentText === '') {
         rafRef.current = requestAnimationFrame(tick);
+        return;
       }
+
+      // 还有字符未显示：按速度累积
+      if (displayedRef.current.length < currentText.length) {
+        const now = performance.now();
+        if (now - lastUpdateRef.current >= currentSpeed) {
+          const nextLen = Math.min(
+            displayedRef.current.length + CHUNK_SIZE,
+            currentText.length
+          );
+          const next = currentText.slice(0, nextLen);
+          displayedRef.current = next;
+          setDisplayed(next);
+          lastUpdateRef.current = now;
+        }
+      }
+
+      // 无论是否已完成，持续调度下一帧（等待文本增长）
+      rafRef.current = requestAnimationFrame(tick);
     };
-    rafRef.current = requestAnimationFrame(tick);
+
+    // 启动循环
+    if (rafRef.current === null) {
+      lastUpdateRef.current = performance.now();
+      rafRef.current = requestAnimationFrame(tick);
+    }
+
+    // 仅组件卸载时清理
     return () => {
       if (rafRef.current !== null) {
         cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
       }
     };
-  }, [text, speed]);
+  }, []);
 
   const memoDisplayed = useMemo(() => displayed, [displayed]);
 

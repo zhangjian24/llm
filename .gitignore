@@ -1,2 +1,4 @@
 .worktrees
 qwen-chatbot/tsconfig.tsbuildinfo
+.playwright-mcp/
+.vite/

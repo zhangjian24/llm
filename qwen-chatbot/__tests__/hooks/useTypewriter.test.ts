@@ -2,7 +2,6 @@ import { renderHook, act } from '@testing-library/react';
 import { useTypewriter } from '../../hooks/useTypewriter';
 import { vi } from 'vitest';
 
-// Mock performance.now and requestAnimationFrame for tests
 let now = 10000;
 vi.stubGlobal('performance', {
     now: () => now,
@@ -19,11 +18,10 @@ vi.stubGlobal('cancelAnimationFrame', (id: number) => {
 
 test('should incrementally return text', () => {
     vi.useFakeTimers();
-    // Advance timers to simulate rAF calls
     const { result } = renderHook(() => useTypewriter('hello', { speed: 50 }));
-    
-    // We need to advance time. 50ms per character, 100ms total = 2 characters.
+
     act(() => { vi.advanceTimersByTime(200); });
+
     expect(result.current.length).toBeGreaterThan(0);
 });
 

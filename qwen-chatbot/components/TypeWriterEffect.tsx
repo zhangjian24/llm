@@ -1,5 +1,6 @@
-import React, { useEffect, useRef, useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { MarkdownRenderer } from './MarkdownRenderer';
+import { useTypewriter } from '../hooks/useTypewriter';
 
 interface TypeWriterEffectProps {
   text: string;
@@ -9,9 +10,9 @@ interface TypeWriterEffectProps {
   className?: string;
 }
 
-function getChunkSize(remaining: number): number {
-  if (remaining <= 50) return 1;
-  if (remaining <= 200) return 5;
+function getChunkSize(total: number): number {
+  if (total <= 50) return 1;
+  if (total <= 200) return 5;
   return 20;
 }
 
@@ -22,97 +23,22 @@ const TypeWriterEffect: React.FC<TypeWriterEffectProps> = ({
   onComplete,
   className = '',
 }) => {
-  const [displayed, setDisplayed] = useState(instant ? text : '');
-  const displayedRef = useRef(instant ? text : '');
-  const textRef = useRef(text);
-  const speedRef = useRef(speed);
-  const instantRef = useRef(instant);
-  const rafRef = useRef<number | null>(null);
-  const lastUpdateRef = useRef(0);
-  const completedRef = useRef(false);
   const onCompleteRef = useRef(onComplete);
-
-  textRef.current = text;
-  speedRef.current = speed;
-  instantRef.current = instant;
   onCompleteRef.current = onComplete;
 
-  useEffect(() => {
-    completedRef.current = false;
+  const chunkSize = instant ? text.length : getChunkSize(text.length);
+  const displayed = useTypewriter(instant ? '' : text, { speed, chunkSize });
+  const displayText = instant ? text : displayed;
 
+  useEffect(() => {
     if (instant) {
-      displayedRef.current = text;
-      setDisplayed(text);
-      completedRef.current = true;
       onCompleteRef.current?.();
-      return;
+    } else if (displayed.length === text.length && text.length > 0) {
+      onCompleteRef.current?.();
     }
+  }, [displayed, text, instant]);
 
-    if (text === '') {
-      displayedRef.current = '';
-      setDisplayed('');
-      completedRef.current = true;
-      return;
-    }
-
-    if (
-      displayedRef.current.length > text.length ||
-      !text.startsWith(displayedRef.current)
-    ) {
-      displayedRef.current = text;
-      setDisplayed(text);
-    }
-  }, [text, instant]);
-
-  useEffect(() => {
-    if (instantRef.current) return;
-
-    const tick = () => {
-      if (instantRef.current) {
-        rafRef.current = requestAnimationFrame(tick);
-        return;
-      }
-
-      const currentText = textRef.current;
-
-      if (displayedRef.current.length < currentText.length) {
-        const now = performance.now();
-        if (now - lastUpdateRef.current >= speedRef.current) {
-          const remaining = currentText.length - displayedRef.current.length;
-          const chunk = getChunkSize(remaining);
-          const nextLen = Math.min(
-            displayedRef.current.length + chunk,
-            currentText.length
-          );
-          displayedRef.current = currentText.slice(0, nextLen);
-          setDisplayed(displayedRef.current);
-          lastUpdateRef.current = now;
-        }
-      }
-
-      if (
-        displayedRef.current.length >= currentText.length &&
-        !completedRef.current
-      ) {
-        completedRef.current = true;
-        onCompleteRef.current?.();
-      }
-
-      rafRef.current = requestAnimationFrame(tick);
-    };
-
-    lastUpdateRef.current = performance.now();
-    rafRef.current = requestAnimationFrame(tick);
-
-    return () => {
-      if (rafRef.current !== null) {
-        cancelAnimationFrame(rafRef.current);
-        rafRef.current = null;
-      }
-    };
-  }, []);
-
-  const memoDisplayed = useMemo(() => displayed, [displayed]);
+  const memoDisplayed = useMemo(() => displayText, [displayText]);
 
   return (
     <div className={className} data-testid="type-writer">

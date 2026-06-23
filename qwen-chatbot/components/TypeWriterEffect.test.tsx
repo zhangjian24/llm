@@ -5,6 +5,7 @@
  * - text 为空时立即返回空字符串
  * - text 变化时重新启动动画
  * - 完整文本在若干帧后渲染完毕
+ * - 增加测试以触发提交
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, act, waitFor } from '@testing-library/react';

@@ -1,17 +1,6 @@
-/**
- * TypeWriterEffect - 打字机效果（性能优化版）
- *
- * 改用 requestAnimationFrame + 字符累积：
- * - 每帧累积 CHUNK_SIZE 个字符（避免 setTimeout 频繁 re-render）
- * - 用 timeStamp 控制累积间隔（FRAME_INTERVAL 约 60fps）
- * - useMemo 缓存输出
- *
- * 测试：components/TypeWriterEffect.test.tsx（待 vitest 安装后执行）
- */
-import React, { useEffect, useRef, useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { MarkdownRenderer } from './MarkdownRenderer';
-
-const CHUNK_SIZE = 3;
+import { useTypewriter } from '../hooks/useTypewriter';
 
 interface TypeWriterEffectProps {
   text: string;
@@ -24,30 +13,7 @@ const TypeWriterEffect: React.FC<TypeWriterEffectProps> = ({
   speed = 30,
   className = '',
 }) => {
-  const [displayed, setDisplayed] = useState('');
-  const rafRef = useRef<number | null>(null);
-  const lastUpdateRef = useRef(0);
-
-  useEffect(() => {
-    setDisplayed('');
-    let i = 0;
-    const tick = (timestamp: number) => {
-      if (timestamp - lastUpdateRef.current >= speed) {
-        i = Math.min(i + CHUNK_SIZE, text.length);
-        setDisplayed(text.slice(0, i));
-        lastUpdateRef.current = timestamp;
-      }
-      if (i < text.length) {
-        rafRef.current = requestAnimationFrame(tick);
-      }
-    };
-    rafRef.current = requestAnimationFrame(tick);
-    return () => {
-      if (rafRef.current !== null) {
-        cancelAnimationFrame(rafRef.current);
-      }
-    };
-  }, [text, speed]);
+  const displayed = useTypewriter(text, { speed });
 
   const memoDisplayed = useMemo(() => displayed, [displayed]);
 

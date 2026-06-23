@@ -1,53 +1,116 @@
-/**
- * TypeWriterEffect - 打字机效果（性能优化版）
- *
- * 改用 requestAnimationFrame + 字符累积：
- * - 每帧累积 CHUNK_SIZE 个字符（避免 setTimeout 频繁 re-render）
- * - 用 timeStamp 控制累积间隔（FRAME_INTERVAL 约 60fps）
- * - useMemo 缓存输出
- *
- * 测试：components/TypeWriterEffect.test.tsx（待 vitest 安装后执行）
- */
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { MarkdownRenderer } from './MarkdownRenderer';
-
-const CHUNK_SIZE = 3;
 
 interface TypeWriterEffectProps {
   text: string;
   speed?: number;
+  instant?: boolean;
+  onComplete?: () => void;
   className?: string;
+}
+
+function getChunkSize(remaining: number): number {
+  if (remaining <= 50) return 1;
+  if (remaining <= 200) return 5;
+  return 20;
 }
 
 const TypeWriterEffect: React.FC<TypeWriterEffectProps> = ({
   text,
-  speed = 30,
+  speed = 50,
+  instant = false,
+  onComplete,
   className = '',
 }) => {
-  const [displayed, setDisplayed] = useState('');
+  const [displayed, setDisplayed] = useState(instant ? text : '');
+  const displayedRef = useRef(instant ? text : '');
+  const textRef = useRef(text);
+  const speedRef = useRef(speed);
+  const instantRef = useRef(instant);
   const rafRef = useRef<number | null>(null);
   const lastUpdateRef = useRef(0);
+  const completedRef = useRef(false);
+  const onCompleteRef = useRef(onComplete);
+
+  textRef.current = text;
+  speedRef.current = speed;
+  instantRef.current = instant;
+  onCompleteRef.current = onComplete;
 
   useEffect(() => {
-    setDisplayed('');
-    let i = 0;
-    const tick = (timestamp: number) => {
-      if (timestamp - lastUpdateRef.current >= speed) {
-        i = Math.min(i + CHUNK_SIZE, text.length);
-        setDisplayed(text.slice(0, i));
-        lastUpdateRef.current = timestamp;
-      }
-      if (i < text.length) {
+    completedRef.current = false;
+
+    if (instant) {
+      displayedRef.current = text;
+      setDisplayed(text);
+      completedRef.current = true;
+      onCompleteRef.current?.();
+      return;
+    }
+
+    if (text === '') {
+      displayedRef.current = '';
+      setDisplayed('');
+      completedRef.current = true;
+      return;
+    }
+
+    if (
+      displayedRef.current.length > text.length ||
+      !text.startsWith(displayedRef.current)
+    ) {
+      displayedRef.current = text;
+      setDisplayed(text);
+    }
+  }, [text, instant]);
+
+  useEffect(() => {
+    if (instantRef.current) return;
+
+    const tick = () => {
+      if (instantRef.current) {
         rafRef.current = requestAnimationFrame(tick);
+        return;
       }
+
+      const currentText = textRef.current;
+
+      if (displayedRef.current.length < currentText.length) {
+        const now = performance.now();
+        if (now - lastUpdateRef.current >= speedRef.current) {
+          const remaining = currentText.length - displayedRef.current.length;
+          const chunk = getChunkSize(remaining);
+          const nextLen = Math.min(
+            displayedRef.current.length + chunk,
+            currentText.length
+          );
+          displayedRef.current = currentText.slice(0, nextLen);
+          setDisplayed(displayedRef.current);
+          lastUpdateRef.current = now;
+        }
+      }
+
+      if (
+        displayedRef.current.length >= currentText.length &&
+        !completedRef.current
+      ) {
+        completedRef.current = true;
+        onCompleteRef.current?.();
+      }
+
+      rafRef.current = requestAnimationFrame(tick);
     };
+
+    lastUpdateRef.current = performance.now();
     rafRef.current = requestAnimationFrame(tick);
+
     return () => {
       if (rafRef.current !== null) {
         cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
       }
     };
-  }, [text, speed]);
+  }, []);
 
   const memoDisplayed = useMemo(() => displayed, [displayed]);
 

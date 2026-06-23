@@ -1,6 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Incremental text rendering
+The system SHALL render streaming text progressively, displaying characters in sequence as they arrive rather than showing the full response at once.
 **User Story**: As a 用户, I want 聊天内容平滑地逐字/逐块显示, so that 能够保持阅读节奏。
 **Priority**: P0
 **Acceptance**: 聊天机器人回复文本需以动画形式展现，而非直接显示全文。
@@ -16,6 +17,7 @@
 ---
 
 ### Requirement: Animation decoupling from data stream
+The animation engine SHALL operate independently from the streaming data source, using a separate buffer to manage display timing.
 **User Story**: As a 开发者, I want 动画引擎独立于 API 流式接口, so that 避免数据流波动导致 UI 动画异常。
 **Priority**: P0
 **Acceptance**: 动画渲染逻辑与流式数据读取逻辑彻底分离，能够独立测试。

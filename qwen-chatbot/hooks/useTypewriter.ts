@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 
-export function useTypewriter(fullText: string, options: { speed: number }) {
+export function useTypewriter(fullText: string, options: { speed: number; chunkSize?: number }) {
   const [displayedText, setDisplayedText] = useState('');
   const fullTextRef = useRef(fullText);
   fullTextRef.current = fullText;
   const isFinished = useRef(false);
+  const chunkSize = options.chunkSize || 1;
 
   useEffect(() => {
     let animationFrame: number;
@@ -16,7 +17,8 @@ export function useTypewriter(fullText: string, options: { speed: number }) {
       if (now - lastUpdate >= options.speed) {
         setDisplayedText(prev => {
           if (prev.length < fullTextRef.current.length) {
-            const next = fullTextRef.current.slice(0, prev.length + 1);
+            const nextLen = Math.min(prev.length + chunkSize, fullTextRef.current.length);
+            const next = fullTextRef.current.slice(0, nextLen);
             if (next.length === fullTextRef.current.length) {
               isFinished.current = true;
             }
@@ -42,7 +44,7 @@ export function useTypewriter(fullText: string, options: { speed: number }) {
     }
     
     return () => cancelAnimationFrame(animationFrame);
-  }, [options.speed, fullText]);
+  }, [options.speed, chunkSize, fullText]);
 
   return displayedText;
 }
